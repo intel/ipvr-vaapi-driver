@@ -590,6 +590,13 @@ static VAStatus tng__VP8_process_picture_param(context_VP8_p ctx, object_buffer_
         ctx->alt_ref_picture = ctx->obj_context->current_render_target;
     }
 
+    if (!(ctx->last_ref_picture) ||
+        !(ctx->last_ref_picture) ||
+        !(ctx->last_ref_picture)) {
+        drv_debug_msg(VIDEO_DEBUG_ERROR, "%s: invalid reference pic ID detected\n", __func__);
+        return VA_STATUS_ERROR_INVALID_SURFACE;
+    }
+
     return VA_STATUS_SUCCESS;
 }
 
@@ -645,7 +652,6 @@ static void tng__VP8_set_target_picture(context_VP8_p ctx) {
     ved_execbuf_rendec_write_address(execbuf, target_surface->buf, target_surface->buf->buffer_ofs + target_surface->luma_offset, 0);
     ved_execbuf_rendec_write_address(execbuf, target_surface->buf, target_surface->buf->buffer_ofs + target_surface->chroma_offset, 0);
     ved_execbuf_rendec_end(execbuf);
-
 }
 
 /* Set Reference pictures address */
@@ -1238,20 +1244,20 @@ static VAStatus tng_VP8_BeginPicture(
     /* Create mem resource for current picture macroblock data to be stored */
     ctx->cur_pic_buffer = drm_ipvr_gem_bo_alloc(obj_context->driver_data->bufmgr,
         ctx->obj_context->ipvr_ctx, "VED-VP8-cur_pic_buffer", ctx->buffer_size,
-        0, DRM_IPVR_UNCACHED, 1);
+        0, IPVR_CACHE_NOACCESS, 1);
     if (!ctx->cur_pic_buffer)
         goto err;
 
     /* Create mem resource for storing 1st partition .*/
     ctx->buffer_1st_part = drm_ipvr_gem_bo_alloc(obj_context->driver_data->bufmgr,
         ctx->obj_context->ipvr_ctx, "VED-VP8-buffer_1st_part", ctx->buffer_size,
-        0, DRM_IPVR_UNCACHED, 1);
+        0, IPVR_CACHE_NOACCESS, 1);
     if (!ctx->buffer_1st_part)
         goto err;
 
     ctx->segID_buffer = drm_ipvr_gem_bo_alloc(obj_context->driver_data->bufmgr,
         ctx->obj_context->ipvr_ctx, "VED-VP8-segID_buffer", ctx->segid_size, 0,
-        DRM_IPVR_UNCACHED, 1);
+        IPVR_CACHE_NOACCESS, 1);
     if (!ctx->segID_buffer)
         goto err;
 
@@ -1259,27 +1265,27 @@ static VAStatus tng_VP8_BeginPicture(
     /* one MB would take 2 bits to store Y2 flag and mb_skip_coeff flag, so size would be same as ui32segidsize */
     ctx->MB_flags_buffer = drm_ipvr_gem_bo_alloc(obj_context->driver_data->bufmgr,
         ctx->obj_context->ipvr_ctx, "VED-VP8-MB_flags_buffer", ctx->segid_size, 0,
-        DRM_IPVR_UNCACHED, 1);
+        IPVR_CACHE_NOACCESS, 1);
     if (!ctx->MB_flags_buffer)
         goto err;
 
     /* allocate device memory for prbability table for the both the partitions.*/
     ctx->probability_data_1st_part = drm_ipvr_gem_bo_alloc(obj_context->driver_data->bufmgr,
         ctx->obj_context->ipvr_ctx, "VED-VP8-probability_data_1st_part",
-        ctx->probability_data_1st_part_size, 0, DRM_IPVR_WRITECOMBINE, 1);
+        ctx->probability_data_1st_part_size, 0, IPVR_CACHE_WRITECOMBINE, 1);
     if (!ctx->probability_data_1st_part)
         goto err;
 
     /* allocate device memory for prbability table for the both the partitions.*/
     ctx->probability_data_2nd_part = drm_ipvr_gem_bo_alloc(obj_context->driver_data->bufmgr,
         ctx->obj_context->ipvr_ctx, "VED-VP8-probability_data_2nd_part",
-        ctx->probability_data_2nd_part_size, 0, DRM_IPVR_WRITECOMBINE, 1);
+        ctx->probability_data_2nd_part_size, 0, IPVR_CACHE_WRITECOMBINE, 1);
     if (!ctx->probability_data_2nd_part)
         goto err;
 
     ctx->intra_buffer = drm_ipvr_gem_bo_alloc(obj_context->driver_data->bufmgr,
         ctx->obj_context->ipvr_ctx, "VED-VP8-intra_buffer", INTRA_BUFFER_SIZE,
-        0, DRM_IPVR_UNCACHED, 1);
+        0, IPVR_CACHE_NOACCESS, 1);
     if (!ctx->intra_buffer)
         goto err;
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011 Intel Corporation. All Rights Reserved.
+ * Copyright (c) 2014 Intel Corporation. All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -22,65 +22,21 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *
  * Authors:
- *    Shengquan Yuan  <shengquan.yuan@intel.com>
- *    Zhaohan Ren  <zhaohan.ren@intel.com>
- *    Jason Hu <jason.hu@intel.com>
+ *    Yao Cheng <yao.cheng@intel.com>
  *
  */
 
 #ifndef _IPVR_OUTPUT_H_
 #define _IPVR_OUTPUT_H_
 #include <inttypes.h>
+#include <va/va.h>
 #include "ipvr_drv_video.h"
 #include "ipvr_surface.h"
 #include "hwdefs/img_types.h"
-#include <va/va.h>
-#include <fcntl.h>
-
-#define IMG_VIDEO_IED_STATE 0
-#ifndef ANDROID
-#include <va/va_x11.h>
-#else
-#define Drawable unsigned int
-#define Bool int
-#endif
 
 #define IPVR_MAX_IMAGE_FORMATS      4 /* sizeof(ipvr__CreateImageFormat)/sizeof(VAImageFormat) */
 #define IPVR_MAX_SUBPIC_FORMATS     3 /* sizeof(ipvr__SubpicFormat)/sizeof(VAImageFormat) */
 #define IPVR_MAX_DISPLAY_ATTRIBUTES 14     /* sizeof(ipvr__DisplayAttribute)/sizeof(VADisplayAttribute) */
-
-#define VA_SUBPICTURE_DESTINATION_IS_SCREEN_COORD       0x0004
-#define IPVR_SUPPORTED_SUBPIC_FLAGS      VA_SUBPICTURE_DESTINATION_IS_SCREEN_COORD /* No alpha or chroma key support */
-
-
-#define CLAMP(_X) ( (_X)= ((_X)<0?0:((_X)>255?255:(_X)) ) )
-
-#define HUE_DEFAULT_VALUE    0
-#define HUE_MIN    -180
-#define HUE_MAX    180
-#define HUE_STEPSIZE 0.1
-
-#define BRIGHTNESS_DEFAULT_VALUE   0
-#define BRIGHTNESS_MIN -100
-#define BRIGHTNESS_MAX 100
-#define BRIGHTNESS_STEPSIZE 0.1
-
-#define CONTRAST_DEFAULT_VALUE 1
-#define CONTRAST_MIN 0
-#define CONTRAST_MAX 2
-#define CONTRAST_STEPSIZE 0.0001
-
-#define SATURATION_DEFAULT_VALUE 1
-#define SATURATION_MIN 0
-#define SATURATION_MAX 3
-#define SATURATION_STEPSIZE 0.0001
-
-#define VA_RENDER_MODE_MASK 0x0f
-#define VA_RENDER_DEVICE_MASK 0x03
-
-#define IPVR_DRIDDX_VERSION_MAJOR 0
-#define IPVR_DRIDDX_VERSION_MINOR 1
-#define IPVR_DRIDDX_VERSION_PATCH 0
 
 #define ipvr__ImageNV12                          \
 {                                               \
@@ -92,66 +48,6 @@
     0,                                          \
     0,                                          \
     0                                           \
-}
-
-#define ipvr__ImageAYUV                          \
-{                                               \
-    VA_FOURCC_AYUV,                             \
-    VA_LSB_FIRST,                               \
-    32,                                         \
-    0,                                          \
-    0,                                          \
-    0,                                          \
-    0,                                          \
-    0                                           \
-}
-
-#define ipvr__ImageAI44                          \
-{                                               \
-    VA_FOURCC_AI44,                             \
-    VA_LSB_FIRST,                               \
-    16,                                         \
-    0,                                          \
-    0,                                          \
-    0,                                          \
-    0,                                          \
-    0,                                          \
-}
-
-#define ipvr__ImageRGBA                          \
-{                                               \
-    VA_FOURCC_RGBA,                             \
-    VA_LSB_FIRST,                               \
-    32,                                         \
-    32,                                         \
-    0xff,                                       \
-    0xff00,                                     \
-    0xff0000,                                   \
-    0xff000000                                  \
-}
-
-#define ipvr__ImageYV16                          \
-{                                               \
-    VA_FOURCC_YV16,                             \
-    VA_LSB_FIRST,                               \
-    16,                                         \
-    0,                                          \
-    0,                                          \
-    0,                                          \
-    0,                                          \
-    0,                                          \
-}
-
-#define ipvr__ImageYV32                          \
-{                                               \
-    VA_FOURCC_YV16,                             \
-    VA_LSB_FIRST,                               \
-    32,                                         \
-    0,                                          \
-    0,                                          \
-    0,                                          \
-    0,                                          \
-    0,                                          \
 }
 
 VAStatus ipvr__destroy_subpicture(ipvr_driver_data_p driver_data, object_subpic_p obj_subpic);
@@ -173,56 +69,6 @@ VAStatus ipvr__CreateBuffer(
 VAStatus ipvr_DestroyBuffer(
     VADriverContextP ctx,
     VABufferID buffer_id
-);
-
-VAStatus ipvr_initOutput(
-    VADriverContextP ctx
-);
-
-
-VAStatus ipvr_deinitOutput(
-    VADriverContextP ctx
-);
-
-VAStatus ipvr_PutSurfaceBuf(
-    VADriverContextP ctx,
-    VASurfaceID surface,
-    unsigned char* data,
-    int* data_len,
-    short srcx,
-    short srcy,
-    unsigned short srcw,
-    unsigned short srch,
-    short destx,
-    short desty,
-    unsigned short destw,
-    unsigned short desth,
-    VARectangle *cliprects, /* client supplied clip list */
-    unsigned int number_cliprects, /* number of clip rects in the clip list */
-    unsigned int flags /* de-interlacing flags */
-);
-
-VAStatus ipvr_SetTimestampForSurface(
-    VADriverContextP ctx,
-    VASurfaceID surface,
-    long long timestamp
-);
-
-VAStatus ipvr_PutSurface(
-    VADriverContextP ctx,
-    VASurfaceID surface,
-    void* draw, /* X Drawable */
-    short srcx,
-    short srcy,
-    unsigned short srcw,
-    unsigned short srch,
-    short destx,
-    short desty,
-    unsigned short destw,
-    unsigned short desth,
-    VARectangle *cliprects, /* client supplied clip list */
-    unsigned int number_cliprects, /* number of clip rects in the clip list */
-    unsigned int flags /* de-interlacing flags */
 );
 
 VAStatus ipvr_QueryImageFormats(
@@ -249,6 +95,7 @@ VAStatus ipvr_DestroyImage(
     VADriverContextP ctx,
     VAImageID image
 );
+
 
 VAStatus ipvr_SetImagePalette(
     VADriverContextP ctx,
@@ -391,5 +238,4 @@ VAStatus ipvr_SetDisplayAttributes(
     VADisplayAttribute *attr_list,
     int num_attributes
 );
-
 #endif /* _IPVR_OUTPUT_H_ */

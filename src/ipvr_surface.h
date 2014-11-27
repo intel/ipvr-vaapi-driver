@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011 Intel Corporation. All Rights Reserved.
+ * Copyright (c) 2011, 2014 Intel Corporation. All Rights Reserved.
  * Copyright (c) Imagination Technologies Limited, UK
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -24,6 +24,7 @@
  *
  * Authors:
  *    Waldo Bastian <waldo.bastian@intel.com>
+ *    Yao Cheng <yao.cheng@intel.com>
  */
 
 #ifndef _IPVR_SURFACE_H_
@@ -61,8 +62,6 @@ typedef struct ipvr_surface_s *ipvr_surface_p;
 
 struct ipvr_surface_s {
     drm_ipvr_bo *buf;
-    drm_ipvr_bo *in_loop_buf;
-    drm_ipvr_bo *ref_buf;
     ipvr_surface_stride_t stride_mode;
     unsigned int stride;
     unsigned int luma_offset;
@@ -74,10 +73,17 @@ struct ipvr_surface_s {
      * extra_info[6]: mfld protected surface
      * extra_info[7]: linear or tiled
      */
-    int extra_info[8];
+    //int extra_info[8];
     unsigned int size;
-    unsigned int bc_buffer;
-    void *handle;
+    int32_t colocate_index;
+    uint32_t fourcc;
+//#define IPVR_SURFACE_TILING_NONE    (0)
+#define IPVR_SURFACE_TILING_512x8    (1 << 0)
+//#define IPVR_SURFACE_TILING_256x16    (1 << 1)
+#define IPVR_SURFACE_COLOCATE_BUF    (1 << 1)
+    uint64_t flags;
+    //unsigned int bc_buffer;
+    //void *handle;
 };
 
 /*
@@ -86,21 +92,34 @@ struct ipvr_surface_s {
 VAStatus ipvr_surface_create(ipvr_driver_data_p driver_data,
                             int width, int height, int fourcc, unsigned int flags,
                             ipvr_surface_p ipvr_surface /* out */
-                           );
+                            );
+VAStatus ipvr_surface_create_from_prime(
+                            ipvr_driver_data_p driver_data,
+                            int width, int height, int fourcc, int tiling,
+                            unsigned int *pitches, unsigned int *offsets,
+                            unsigned int size,
+                            ipvr_surface_p ipvr_surface, /* out */
+                            int prime_fd,
+                            unsigned int flags
+                            );
 
 
-#define SET_SURFACE_INFO_rotate(ipvr_surface, rotate) ipvr_surface->extra_info[5] = (uint32_t) rotate;
-#define GET_SURFACE_INFO_rotate(ipvr_surface) ((int) ipvr_surface->extra_info[5])
-#define GET_SURFACE_INFO_protect(ipvr_surface) ((int) ipvr_surface->extra_info[6])
-#define SET_SURFACE_INFO_protect(ipvr_surface, protect) (ipvr_surface->extra_info[6] = protect)
-#define SET_SURFACE_INFO_tiling(ipvr_surface, tiling) ipvr_surface->extra_info[7] = (uint32_t) tiling;
-#define GET_SURFACE_INFO_tiling(ipvr_surface) ((unsigned long) ipvr_surface->extra_info[7])
+//#define SET_SURFACE_INFO_rotate(ipvr_surface, rotate) ipvr_surface->extra_info[5] = (uint32_t) rotate;
+//#define GET_SURFACE_INFO_rotate(ipvr_surface) ((int) ipvr_surface->extra_info[5])
+//#define GET_SURFACE_INFO_protect(ipvr_surface) ((int) ipvr_surface->extra_info[6])
+//#define SET_SURFACE_INFO_protect(ipvr_surface, protect) (ipvr_surface->extra_info[6] = protect)
+//#define SET_SURFACE_INFO_tiling(ipvr_surface, tiling) ipvr_surface->extra_info[7] = (uint32_t) tiling;
+//#define GET_SURFACE_INFO_tiling(ipvr_surface) ((unsigned long) ipvr_surface->extra_info[7])
+#define SET_SURFACE_INFO_tiling(ipvr_surface, tiling) \
+    ipvr_surface->flags |= tiling;
+#define GET_SURFACE_INFO_tiling(ipvr_surface) \
+    (ipvr_surface->flags & IPVR_SURFACE_TILING_512x8)
 
 
 /*
  * Temporarily map surface and set all chroma values of surface to 'chroma'
  */
-VAStatus ipvr_surface_set_chroma(ipvr_surface_p ipvr_surface, int chroma);
+//VAStatus ipvr_surface_set_chroma(ipvr_surface_p ipvr_surface, int chroma);
 
 /*
  * Destroy surface
@@ -120,8 +139,8 @@ VAStatus ipvr_surface_query_status(ipvr_surface_p ipvr_surface, VASurfaceStatus 
 /*
  * Set current displaying surface info to kernel
  */
-int ipvr_surface_set_displaying(ipvr_driver_data_p driver_data,
-                               int width, int height,
-                               ipvr_surface_p ipvr_surface);
+//int ipvr_surface_set_displaying(ipvr_driver_data_p driver_data,
+//                               int width, int height,
+//                               ipvr_surface_p ipvr_surface);
 
 #endif /* _IPVR_SURFACE_H_ */

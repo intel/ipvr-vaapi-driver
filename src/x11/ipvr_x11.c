@@ -71,6 +71,7 @@ VAStatus ipvr_PutSurface(
 )
 {
     INIT_DRIVER_DATA;
+
     GC gc;
     XImage *ximg = NULL;
     Visual *visual;
@@ -217,7 +218,5 @@ out:
     }
 
     XFreeGC((Display *)ctx->native_dpy, gc);
-
-
     return VA_STATUS_SUCCESS;
 }

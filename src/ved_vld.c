@@ -28,6 +28,7 @@
  *    Li Zeng <li.zeng@intel.com>
  *    Yao Cheng <yao.cheng@intel.com>
  */
+#include <stdlib.h>
 #include "ved_vld.h"
 #include "ipvr_drv_debug.h"
 #include "hwdefs/img_types.h"
@@ -37,9 +38,6 @@
 #include "hwdefs/msvdx_cmds_io2.h"
 #include "va/va_dec_jpeg.h"
 #include "va/va_dec_vp8.h"
-
-#define GET_SURFACE_INFO_colocated_index(ipvr_surface) ((int) (ipvr_surface->extra_info[3]))
-#define SET_SURFACE_INFO_colocated_index(ipvr_surface, val) ipvr_surface->extra_info[3] = (uint32_t) val;
 
 /* Set MSVDX Front end register */
 void vld_dec_FE_state(object_context_p obj_context, drm_ipvr_bo *buf)
@@ -268,7 +266,7 @@ VAStatus vld_dec_allocate_colocated_buffer(context_DEC_p ctx, object_surface_p o
     VAStatus vaStatus;
     char boname[256];
     ipvr_surface_p surface = obj_surface->ipvr_surface;
-    int index = GET_SURFACE_INFO_colocated_index(surface);
+    int index = surface->colocate_index;
     memset(boname, 0, sizeof(boname));
     snprintf(boname, sizeof(boname), "VED-colocated_buffer_%d", index);
 
@@ -282,26 +280,26 @@ VAStatus vld_dec_allocate_colocated_buffer(context_DEC_p ctx, object_surface_p o
 
         buf = ctx->colocated_buffers[index];
         buf = drm_ipvr_gem_bo_alloc(ctx->obj_context->driver_data->bufmgr, ctx->obj_context->ipvr_ctx,
-            boname, size, 0, DRM_IPVR_UNCACHED, 0);
+            boname, size, 0, IPVR_CACHE_NOACCESS, 0);
         if (!buf)
             vaStatus = VA_STATUS_ERROR_ALLOCATION_FAILED;
         if (VA_STATUS_SUCCESS != vaStatus) {
             return vaStatus;
         }
         ctx->colocated_buffers_idx++;
-        SET_SURFACE_INFO_colocated_index(surface, index + 1); /* 0 means unset, index is offset by 1 */
+        surface->colocate_index = index + 1; /* 0 means unset, index is offset by 1 */
     } else {
         buf = ctx->colocated_buffers[index - 1];
         if (buf->size < size) {
             drm_ipvr_gem_bo_unreference(buf);
             buf = drm_ipvr_gem_bo_alloc(ctx->obj_context->driver_data->bufmgr, ctx->obj_context->ipvr_ctx,
-                boname, size, 0, DRM_IPVR_UNCACHED, 0);
+                boname, size, 0, IPVR_CACHE_NOACCESS, 0);
             if (!buf)
                 vaStatus = VA_STATUS_ERROR_ALLOCATION_FAILED;
             if (VA_STATUS_SUCCESS != vaStatus) {
                 return vaStatus;
             }
-            SET_SURFACE_INFO_colocated_index(surface, index); /* replace the original buffer */
+            surface->colocate_index = index; /* replace the original buffer */
         }
     }
     return VA_STATUS_SUCCESS;
@@ -309,7 +307,7 @@ VAStatus vld_dec_allocate_colocated_buffer(context_DEC_p ctx, object_surface_p o
 
 drm_ipvr_bo* vld_dec_lookup_colocated_buffer(context_DEC_p ctx, ipvr_surface_p surface)
 {
-    int index = GET_SURFACE_INFO_colocated_index(surface);
+    int index = surface->colocate_index;
     if (!index) {
         return NULL;
     }
@@ -322,7 +320,7 @@ VAStatus vld_dec_BeginPicture(
     int ret;
     ctx->aux_line_buffer_vld = drm_ipvr_gem_bo_alloc(obj_context->driver_data->bufmgr,
         ctx->obj_context->ipvr_ctx, "VED-aux_line_buffer_vld",
-        AUX_LINE_BUFFER_VLD_SIZE, 0, DRM_IPVR_UNCACHED, 1);
+        AUX_LINE_BUFFER_VLD_SIZE, 0, IPVR_CACHE_NOACCESS, 1);
     if (!ctx->aux_line_buffer_vld) {
         return VA_STATUS_ERROR_ALLOCATION_FAILED;
     }
@@ -337,6 +335,7 @@ VAStatus vld_dec_EndPicture(
     context_DEC_p ctx)
 {
     ipvr_execbuffer_put(ctx->obj_context->execbuf);
+    //ctx->obj_context->execbuf = NULL;
     if (ctx->aux_line_buffer_vld)
         drm_ipvr_gem_bo_unreference(ctx->aux_line_buffer_vld);
     return VA_STATUS_SUCCESS;

@@ -41,7 +41,6 @@
 #include "ipvr_drv_video.h"
 #include "ipvr_drv_debug.h"
 #include "ipvr_surface.h"
-#include "ipvr_surface_attrib.h"
 #include "android/ipvr_android.h"
 #include "ipvr_drv_debug.h"
 using namespace android;

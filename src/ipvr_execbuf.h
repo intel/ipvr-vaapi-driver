@@ -32,6 +32,7 @@
 #include "ipvr_drv_video.h"
 #include "ipvr_bufmgr.h"
 #include <stdint.h>
+#include <libdrm/ipvr_drm.h>
 
 typedef struct ipvr_execbuffer_s ipvr_execbuffer_t;
 typedef ipvr_execbuffer_t *ipvr_execbuffer_p;
@@ -42,6 +43,7 @@ struct ipvr_execbuffer_s {
     unsigned long       start_offset;
     unsigned char       *vaddr;
     void                *priv;
+    unsigned char       valid;
 
     int (*reloc)(ipvr_execbuffer_p execbuf, drm_ipvr_bo *target_bo,
                  unsigned long offset, unsigned long target_offset, uint32_t flags);

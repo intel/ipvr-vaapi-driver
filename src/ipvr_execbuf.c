@@ -88,6 +88,8 @@ ipvr__execbuffer_full(ipvr_execbuffer_p execbuf)
 
 int ipvr_execbuffer_run(ipvr_execbuffer_p execbuf)
 {
+    if (!execbuf->valid)
+        return -EINVAL;
     if(execbuf->run)
         return execbuf->run(execbuf);
     else {
@@ -98,14 +100,19 @@ int ipvr_execbuffer_run(ipvr_execbuffer_p execbuf)
 
 void ipvr_execbuffer_put(ipvr_execbuffer_p execbuf)
 {
+    if (!execbuf->valid)
+        return;
     if(execbuf->put)
         execbuf->put(execbuf);
     else
         drv_debug_msg(VIDEO_DEBUG_WARNING, "%s: missing execbuffer put callback!\n", __func__);
+    execbuf->valid = 0;
 }
 
 int ipvr_execbuffer_ready(ipvr_execbuffer_p execbuf)
 {
+    if (!execbuf->valid)
+        return -EINVAL;
     if(execbuf->ready)
         return execbuf->ready(execbuf);
     else {
@@ -116,6 +123,8 @@ int ipvr_execbuffer_ready(ipvr_execbuffer_p execbuf)
 
 int ipvr_execbuffer_full(ipvr_execbuffer_p execbuf)
 {
+    if (!execbuf->valid)
+        return -EINVAL;
     if(execbuf->full)
         return execbuf->full(execbuf);
     else {
@@ -127,6 +136,8 @@ int ipvr_execbuffer_full(ipvr_execbuffer_p execbuf)
 int ipvr_execbuffer_reloc(ipvr_execbuffer_p execbuf, drm_ipvr_bo *target_bo,
                  unsigned long offset, unsigned long target_offset, uint32_t flags)
 {
+    if (!execbuf->valid)
+        return -EINVAL;
     if(execbuf->reloc)
         return execbuf->reloc(execbuf, target_bo, offset, target_offset, flags);
     else {
@@ -137,6 +148,8 @@ int ipvr_execbuffer_reloc(ipvr_execbuffer_p execbuf, drm_ipvr_bo *target_bo,
 
 int ipvr_execbuffer_add_command(ipvr_execbuffer_p execbuf, int cmd, void *arg, size_t arg_size)
 {
+    if (!execbuf->valid)
+        return -EINVAL;
     if(execbuf->add_command)
         return execbuf->add_command(execbuf, cmd, arg, arg_size);
     else {
@@ -150,13 +163,14 @@ int ipvr_execbuffer_get(drm_ipvr_bufmgr *bufmgr, drm_ipvr_context *ctx,
                  size_t buf_size, int reusable)
 {
     int ret;
+    ASSERT (!execbuf->valid);
     execbuf->put = ipvr__execbuffer_put;
     execbuf->reloc = ipvr__execbuffer_reloc;
     execbuf->full = ipvr__execbuffer_full;
     execbuf->cur_offset = 0;
     execbuf->start_offset = 0;
     execbuf->bo = drm_ipvr_gem_bo_alloc(bufmgr, ctx, name, buf_size, 0,
-        DRM_IPVR_WRITECOMBINE, reusable);
+        IPVR_CACHE_WRITECOMBINE, reusable);
     if (!execbuf->bo) {
         return -ENOMEM;
     }

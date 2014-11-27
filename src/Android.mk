@@ -32,7 +32,6 @@ LOCAL_SRC_FILES :=               \
     object_heap.c                  \
     ipvr_drv_debug.c                \
     ipvr_drv_video.c                \
-    ipvr_surface_attrib.c           \
     ipvr_surface.c                  \
     ipvr_output.c                  \
     android/ipvr_android.c           \
@@ -60,10 +59,6 @@ LOCAL_MODULE := pvr_drv_video
 ifeq ($(strip $(IPVR_VIDEO_LOG_ENABLE)),true)
 LOCAL_CFLAGS += -DIPVR_VIDEO_LOG_ENABLE -DLOG_TAG=\"pvr_drv_video\"
 LOCAL_SHARED_LIBRARIES += liblog
-endif
-
-ifeq ($(TARGET_BOARD_PLATFORM),merrifield)
-LOCAL_CFLAGS += -DMERRIFIELD
 endif
 
 ifeq ($(TARGET_BOARD_PLATFORM),baytrail)

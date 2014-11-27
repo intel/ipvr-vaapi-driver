@@ -30,6 +30,7 @@
 #include "ipvr_def.h"
 #include "ipvr_surface.h"
 #include "ipvr_drv_debug.h"
+#include <libdrm/ipvr_drm.h>
 
 /*
  * Create surface
@@ -75,7 +76,7 @@ VAStatus ipvr_surface_create(ipvr_driver_data_p driver_data,
         ipvr_surface->luma_offset = 0;
         ipvr_surface->chroma_offset = ipvr_surface->stride * height;
         ipvr_surface->size = (ipvr_surface->stride * height * 3) / 2;
-        ipvr_surface->extra_info[4] = VA_FOURCC_NV12;
+        ipvr_surface->fourcc = VA_FOURCC_NV12;
     } 
     else {
         drv_debug_msg(VIDEO_DEBUG_ERROR, "%s::%d unsupported fourcc \"%c%c%c%c\"\n",
@@ -84,12 +85,71 @@ VAStatus ipvr_surface_create(ipvr_driver_data_p driver_data,
         return VA_STATUS_ERROR_ALLOCATION_FAILED;
     }
 
-    if (flags & IS_PROTECTED)
-        SET_SURFACE_INFO_protect(ipvr_surface, 1);
-
     ipvr_surface->buf = drm_ipvr_gem_bo_alloc(driver_data->bufmgr, NULL,
-        "VASurface", ipvr_surface->size, tiling, DRM_IPVR_UNCACHED, 0);
+        "VASurface", ipvr_surface->size, tiling, IPVR_CACHE_NOACCESS, 0);
 
+    return ipvr_surface->buf ? VA_STATUS_SUCCESS: VA_STATUS_ERROR_ALLOCATION_FAILED;
+}
+
+/*
+ * Create surface by importing PRIME BO
+ */
+VAStatus ipvr_surface_create_from_prime(
+    ipvr_driver_data_p driver_data,
+    int width, int height, int fourcc, int tiling,
+    unsigned int *pitches, unsigned int *offsets,
+    unsigned int size,
+    ipvr_surface_p ipvr_surface, /* out */
+    int prime_fd,
+    unsigned int flags)
+{
+    drv_debug_msg(VIDEO_DEBUG_ERROR, "%s::%d, ipvr_surface=%p\n", __func__, __LINE__, ipvr_surface);
+    ASSERT (!tiling);
+    if (fourcc == VA_FOURCC_NV12) {
+        ipvr_surface->stride = pitches[0];
+        if (0) {
+            ;
+        } else if (512 == pitches[0]) {
+            ipvr_surface->stride_mode = STRIDE_512;
+        } else if (1024 == pitches[0]) {
+            ipvr_surface->stride_mode = STRIDE_1024;
+        } else if (1280 == pitches[0]) {
+            ipvr_surface->stride_mode = STRIDE_1280;
+            if (tiling) {
+                ipvr_surface->stride_mode = STRIDE_2048;
+                ipvr_surface->stride = 2048;
+            }
+        } else if (2048 == pitches[0]) {
+            ipvr_surface->stride_mode = STRIDE_2048;
+        } else if (4096 == pitches[0]) {
+            ipvr_surface->stride_mode = STRIDE_4096;
+        } else {
+            ipvr_surface->stride_mode = STRIDE_NA;
+        }
+        if (ipvr_surface->stride != pitches[0]) {
+            return VA_STATUS_ERROR_ALLOCATION_FAILED;
+        }
+
+        ipvr_surface->luma_offset = offsets[0];
+        ipvr_surface->chroma_offset = offsets[1];
+
+        drv_debug_msg(VIDEO_DEBUG_GENERAL, "%s surface stride %d height %d, width %d, "
+            "luma_off %d, chroma off %d\n", __func__, ipvr_surface->stride,
+            height, width, ipvr_surface->luma_offset, ipvr_surface->chroma_offset);
+        ipvr_surface->size = size;
+        ipvr_surface->fourcc = VA_FOURCC_NV12;
+    } else {
+        drv_debug_msg(VIDEO_DEBUG_ERROR, "%s unknown fourcc %c%c%c%c\n",
+            __func__,
+            fourcc & 0xff, (fourcc >> 8) & 0xff,
+            (fourcc >> 16) & 0xff, (fourcc >> 24) & 0xff);
+        return VA_STATUS_ERROR_INVALID_IMAGE_FORMAT;
+    }
+    ASSERT (ipvr_surface->size > 0);
+    drv_debug_msg(VIDEO_DEBUG_ERROR, "%s create_from_prime with fd %d and size 0x%x\n",
+        __func__, prime_fd, ipvr_surface->size);
+    ipvr_surface->buf = drm_ipvr_gem_bo_create_from_prime(driver_data->bufmgr,
+        prime_fd, ipvr_surface->size);
     return ipvr_surface->buf ? VA_STATUS_SUCCESS: VA_STATUS_ERROR_ALLOCATION_FAILED;
 }
 
@@ -99,21 +159,16 @@ VAStatus ipvr_surface_create(ipvr_driver_data_p driver_data,
 void ipvr_surface_destroy(ipvr_surface_p ipvr_surface)
 {
     drm_ipvr_gem_bo_unreference(ipvr_surface->buf);
-    if (ipvr_surface->in_loop_buf)
-        drm_ipvr_gem_bo_unreference(ipvr_surface->in_loop_buf);
-
 }
 
 VAStatus ipvr_surface_sync(ipvr_surface_p ipvr_surface)
 {
     drm_ipvr_gem_bo_wait(ipvr_surface->buf);
-
     return VA_STATUS_SUCCESS;
 }
 
 VAStatus ipvr_surface_query_status(ipvr_surface_p ipvr_surface, VASurfaceStatus *status)
 {
-    // query decode status in VED (not in I915 rendering side)
     if (drm_ipvr_gem_bo_busy(ipvr_surface->buf))
         *status = VASurfaceRendering;
     else
@@ -129,7 +184,6 @@ int ipvr_surface_set_displaying(ipvr_driver_data_p driver_data,
                                int width, int height,
                                ipvr_surface_p ipvr_surface)
 {
-    /* TODO: map and write with X API */
     return VA_STATUS_ERROR_UNIMPLEMENTED;
 }
 

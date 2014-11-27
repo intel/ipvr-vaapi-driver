@@ -29,7 +29,7 @@ pvr_drv_video_la_LIBADD = -ldrm -ldrm_ipvr -lX11 -lva-x11 -lm -ldl
 AM_CFLAGS = -DDEBUG -DLINUX -I$(top_srcdir)/src/hwdefs $(DRM_CFLAGS) -fvisibility=hidden
 
 pvr_drv_video_la_SOURCES = \
-		object_heap.c ipvr_drv_debug.c ipvr_drv_video.c ipvr_output.c ipvr_surface_attrib.c ipvr_surface.c \
+		object_heap.c ipvr_drv_debug.c ipvr_drv_video.c ipvr_surface.c ipvr_output.c \
 		ipvr_execbuf.c ved_execbuf.c ved_vld.c ved_vp8.c x11/ipvr_x11.c
 
 CFLAGS += -Wall -ffloat-store -fvisibility=hidden -DIPVR_VIDEO_LOG_ENABLE -DBAYTRAIL
