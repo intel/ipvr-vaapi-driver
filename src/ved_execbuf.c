@@ -89,7 +89,7 @@ typedef struct ved_execbuf_private_s {
 
 static int ved_execbuffer_get(drm_ipvr_bufmgr *bufmgr, drm_ipvr_context *ctx,
                  ipvr_execbuffer_p execbuf, const char *name,
-                 size_t buf_size, int reusable);
+                 size_t buf_size);
 
 static int ved__execbuffer_ready(ipvr_execbuffer_p execbuf)
 {
@@ -132,7 +132,7 @@ int ved_context_get_execbuf(object_context_p obj_context)
         ASSERT(!obj_context->execbuf->valid);
 
     ret = ved_execbuffer_get(obj_context->driver_data->bufmgr, obj_context->ipvr_ctx,
-        obj_context->execbuf, "VED-CtrlAlloc", CMD_SIZE, 1);
+        obj_context->execbuf, "VED-CtrlAlloc", CMD_SIZE);
     
     return ret;
 }
@@ -357,7 +357,7 @@ void ved_execbuf_dma_write_bitstream_chained(ipvr_execbuffer_p execbuf,
     ved_execbuf_private_p execbuf_priv = (ved_execbuf_private_p)execbuf->priv;
     EMIT_DWORD(execbuf, CMD_BITSTREAM_DMA | size_in_bytes);
     EMIT_RELOC(execbuf, *(execbuf->vaddr + execbuf->cur_offset),
-        bitstream_buf->buffer_ofs, bitstream_buf, 0);
+        0, bitstream_buf, 0);
 
     *(execbuf_priv->cmd_bitstream_size) += size_in_bytes;
 }
@@ -612,23 +612,23 @@ ved__execbuffer_run(ipvr_execbuffer_p execbuf)
 
 static int ved_execbuffer_get(drm_ipvr_bufmgr *bufmgr, drm_ipvr_context *ctx,
                  ipvr_execbuffer_p execbuf, const char *name,
-                 size_t buf_size, int reusable)
+                 size_t buf_size)
 {
     int ret;
-    ret = ipvr_execbuffer_get(bufmgr, ctx, execbuf, name, buf_size, reusable);
+    ret = ipvr_execbuffer_get(bufmgr, ctx, execbuf, name, buf_size);
     if (ret) {
         return -ENOMEM;
     }
     static ved_execbuf_private_t execbuf_priv;
     memset(&execbuf_priv, 0, sizeof(execbuf_priv));
     execbuf_priv.bo = drm_ipvr_gem_bo_alloc(bufmgr, ctx, "VED-MtxMessage",
-        MTXMSG_SIZE, 0, IPVR_CACHE_WRITECOMBINE, reusable);
+        MTXMSG_SIZE, 0, IPVR_CACHE_WRITECOMBINE);
     if (!execbuf_priv.bo) {
         ipvr_execbuffer_put(execbuf);
         drv_debug_msg(VIDEO_DEBUG_ERROR, "%s failed to allocate CMD buf\n", __func__);
         return -ENOMEM;
     }
-    ret = drm_ipvr_gem_bo_map(execbuf_priv.bo, 0, MTXMSG_SIZE, 1);
+    ret = drm_ipvr_gem_bo_map(execbuf_priv.bo, 1);
     if (ret) {
         drm_ipvr_gem_bo_unreference(execbuf_priv.bo);
         ipvr_execbuffer_put(execbuf);

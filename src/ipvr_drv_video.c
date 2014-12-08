@@ -982,7 +982,7 @@ static VAStatus ipvr__allocate_BO_buffer(ipvr_driver_data_p driver_data, object_
         }
     }
 
-    uint32_t cache_level = 0;
+    uint32_t cache_level = IPVR_CACHE_WRITEBACK;
     switch (obj_buffer->type) {
     case VAImageBufferType: /* Xserver side PutSurface, Image/subpicture buffer
         * should be shared between two process
@@ -990,7 +990,7 @@ static VAStatus ipvr__allocate_BO_buffer(ipvr_driver_data_p driver_data, object_
         cache_level = IPVR_CACHE_NOACCESS;
         break;
     default:
-        cache_level = IPVR_CACHE_NOACCESS;
+        cache_level = IPVR_CACHE_WRITECOMBINE;
         break;
     }
 
@@ -1000,9 +1000,9 @@ static VAStatus ipvr__allocate_BO_buffer(ipvr_driver_data_p driver_data, object_
     if (!obj_buffer->ipvr_bo) {
         size = (size + 0x7fff) & ~0x7fff;
         obj_buffer->ipvr_bo = drm_ipvr_gem_bo_alloc(driver_data->bufmgr, obj_context->ipvr_ctx,
-            buffer_type_to_string(obj_buffer->type), size, cache_level, IPVR_CACHE_WRITECOMBINE, 1);
+            buffer_type_to_string(obj_buffer->type), size, 0, cache_level);
         if (obj_buffer->ipvr_bo) {
-            obj_buffer->alloc_size = obj_buffer->ipvr_bo->alloc_size;
+            obj_buffer->alloc_size = obj_buffer->ipvr_bo->size;
         }
         else {
             obj_buffer->alloc_size = 0;
@@ -1017,7 +1017,7 @@ static VAStatus ipvr__map_buffer(object_buffer_p obj_buffer)
 {
     int ret;
     if (obj_buffer->ipvr_bo) {
-        ret = drm_ipvr_gem_bo_map(obj_buffer->ipvr_bo, 0, obj_buffer->ipvr_bo->size, 1);
+        ret = drm_ipvr_gem_bo_map(obj_buffer->ipvr_bo, 1);
         if (ret) {
             drv_debug_msg(VIDEO_DEBUG_ERROR, "Mapping buffer %08x (off 0x%lx) failed: %s (%d)\n",
                 obj_buffer->ipvr_bo->handle, obj_buffer->ipvr_bo->offset,
@@ -1300,7 +1300,6 @@ VAStatus ipvr__CreateBuffer(
         obj_buffer->num_elements = num_elements;
         if (data && (obj_buffer->type != VAProtectedSliceDataBufferType)) {
             if (obj_buffer->ipvr_bo) {
-                assert(obj_buffer->ipvr_bo->alloc_size >= obj_buffer->ipvr_bo->size);
                 assert(obj_buffer->ipvr_bo->size >= size);
             }
             vaStatus = ipvr__map_buffer(obj_buffer);
@@ -1803,8 +1802,7 @@ VAStatus ipvr_LockSurface(
         drm_ipvr_gem_bo_flink(ipvr_surface->buf, buffer_name);
 
     if (buffer) { /* map the surface buffer */
-        uint32_t srf_buf_ofs = 0;
-        if (drm_ipvr_gem_bo_map(ipvr_surface->buf, 0, ipvr_surface->buf->size, 1)) {
+        if (drm_ipvr_gem_bo_map(ipvr_surface->buf, 1)) {
             *buffer = NULL;
             vaStatus = VA_STATUS_ERROR_UNKNOWN;
             DEBUG_FAILURE;
@@ -1813,8 +1811,7 @@ VAStatus ipvr_LockSurface(
             return vaStatus;
         }
         surface_data = ipvr_surface->buf->virt;
-        srf_buf_ofs = ipvr_surface->buf->buffer_ofs;
-        *buffer = surface_data + srf_buf_ofs;
+        *buffer = surface_data;
     }
 
     *fourcc = VA_FOURCC_NV12;
@@ -1889,7 +1886,7 @@ static VAStatus ipvr__initDRM(VADriverContextP ctx)
     VAStatus vaStatus = ipvr__initDRI(ctx);
 
     if (vaStatus == VA_STATUS_SUCCESS) {
-        driver_data->bufmgr = drm_ipvr_gem_bufmgr_init(driver_data->drm_fd, 0x8000);
+        driver_data->bufmgr = drm_ipvr_gem_bufmgr_init(driver_data->drm_fd);
         if (driver_data->bufmgr == NULL) {
             drv_debug_msg(VIDEO_DEBUG_ERROR, "failed to get GEM pool\n");
             return VA_STATUS_ERROR_UNKNOWN;

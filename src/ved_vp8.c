@@ -563,11 +563,18 @@ static VAStatus tng__VP8_process_picture_param(context_VP8_p ctx, object_buffer_
 
     ctx->size_mb = ((ctx->pic_params->frame_width) * (ctx->pic_params->frame_height)) >> 8;
 
-    ctx->obj_context->operating_mode = get_inloop_opmod(ctx); /* port from ui32OperatingMode = mpDestFrame->GetInloopOpMode() */
-    REGIO_WRITE_FIELD_LITE(ctx->obj_context->operating_mode, MSVDX_CMDS, OPERATING_MODE, CHROMA_FORMAT, 1);
-    REGIO_WRITE_FIELD_LITE(ctx->obj_context->operating_mode, MSVDX_CMDS, OPERATING_MODE, ASYNC_MODE, (pic_params->pic_fields.bits.loop_filter_disable == 0)? 0:1);/* 0 = VDMC and VDEB active.  1 = VDEB pass-thru. */
-    REGIO_WRITE_FIELD_LITE(ctx->obj_context->operating_mode, MSVDX_CMDS, OPERATING_MODE, CODEC_MODE, VEC_MODE_VP8);
-    REGIO_WRITE_FIELD_LITE(ctx->obj_context->operating_mode, MSVDX_CMDS, OPERATING_MODE, CODEC_PROFILE, pic_params->pic_fields.bits.version);
+     /* port from ui32OperatingMode = mpDestFrame->GetInloopOpMode() */
+     ctx->obj_context->operating_mode = get_inloop_opmod(ctx);
+    REGIO_WRITE_FIELD_LITE(ctx->obj_context->operating_mode,
+        MSVDX_CMDS, OPERATING_MODE, CHROMA_FORMAT, 1);
+    /* 0 = VDMC and VDEB active.  1 = VDEB pass-thru. */
+    REGIO_WRITE_FIELD_LITE(ctx->obj_context->operating_mode,
+        MSVDX_CMDS, OPERATING_MODE, ASYNC_MODE,
+        (pic_params->pic_fields.bits.loop_filter_disable == 0)? 0:1);
+    REGIO_WRITE_FIELD_LITE(ctx->obj_context->operating_mode,
+        MSVDX_CMDS, OPERATING_MODE, CODEC_MODE, VEC_MODE_VP8);
+    REGIO_WRITE_FIELD_LITE(ctx->obj_context->operating_mode,
+        MSVDX_CMDS, OPERATING_MODE, CODEC_PROFILE, pic_params->pic_fields.bits.version);
 
     if (pic_params->last_ref_frame != VA_INVALID_SURFACE) {
         ctx->last_ref_picture = SURFACE(pic_params->last_ref_frame);
@@ -600,7 +607,8 @@ static VAStatus tng__VP8_process_picture_param(context_VP8_p ctx, object_buffer_
     return VA_STATUS_SUCCESS;
 }
 
-static VAStatus tng__VP8_process_probility_param(context_VP8_p ctx, object_buffer_p obj_buffer) {
+static VAStatus
+tng__VP8_process_probility_param(context_VP8_p ctx, object_buffer_p obj_buffer) {
     ASSERT(obj_buffer->type == VAProbabilityBufferType);
     ASSERT(obj_buffer->num_elements == 1);
     ASSERT(obj_buffer->size == sizeof(VANodeProbabilityBufferVP8));
@@ -622,7 +630,8 @@ static VAStatus tng__VP8_process_probility_param(context_VP8_p ctx, object_buffe
     return VA_STATUS_SUCCESS;
 }
 
-static VAStatus tng__VP8_process_iq_matrix(context_VP8_p ctx, object_buffer_p obj_buffer) {
+static VAStatus
+tng__VP8_process_iq_matrix(context_VP8_p ctx, object_buffer_p obj_buffer) {
      ASSERT(obj_buffer->type == VAIQMatrixBufferType);
      ASSERT(obj_buffer->num_elements == 1);
      ASSERT(obj_buffer->size == sizeof(VAIQMatrixBufferVP8));
@@ -647,10 +656,13 @@ static VAStatus tng__VP8_process_iq_matrix(context_VP8_p ctx, object_buffer_p ob
 static void tng__VP8_set_target_picture(context_VP8_p ctx) {
     ipvr_execbuffer_p execbuf = ctx->obj_context->execbuf;
     ipvr_surface_p target_surface = ctx->obj_context->current_render_target->ipvr_surface;
-    ved_execbuf_rendec_start(execbuf, RENDEC_REGISTER_OFFSET(MSVDX_CMDS, LUMA_RECONSTRUCTED_PICTURE_BASE_ADDRESSES));
+    ved_execbuf_rendec_start(execbuf,
+        RENDEC_REGISTER_OFFSET(MSVDX_CMDS, LUMA_RECONSTRUCTED_PICTURE_BASE_ADDRESSES));
 
-    ved_execbuf_rendec_write_address(execbuf, target_surface->buf, target_surface->buf->buffer_ofs + target_surface->luma_offset, 0);
-    ved_execbuf_rendec_write_address(execbuf, target_surface->buf, target_surface->buf->buffer_ofs + target_surface->chroma_offset, 0);
+    ved_execbuf_rendec_write_address(execbuf, target_surface->buf,
+        target_surface->luma_offset, 0);
+    ved_execbuf_rendec_write_address(execbuf, target_surface->buf,
+        target_surface->chroma_offset, 0);
     ved_execbuf_rendec_end(execbuf);
 }
 
@@ -662,19 +674,23 @@ static void tng__VP8_set_reference_picture(context_VP8_p ctx) {
     ipvr_surface_p golden_ref_surface = ctx->golden_ref_picture->ipvr_surface;
     ipvr_surface_p alt_ref_surface = ctx->alt_ref_picture->ipvr_surface;
 
-    ved_execbuf_rendec_start(execbuf, RENDEC_REGISTER_OFFSET(MSVDX_CMDS, REFERENCE_PICTURE_BASE_ADDRESSES));
+    ved_execbuf_rendec_start(execbuf,
+        RENDEC_REGISTER_OFFSET(MSVDX_CMDS, REFERENCE_PICTURE_BASE_ADDRESSES));
 
     /* write last refernce picture address */
-    ved_execbuf_rendec_write_address(execbuf, last_ref_surface->buf, last_ref_surface->buf->buffer_ofs, 1);
-    ved_execbuf_rendec_write_address(execbuf, last_ref_surface->buf, last_ref_surface->buf->buffer_ofs + last_ref_surface->chroma_offset, 1);
+    ved_execbuf_rendec_write_address(execbuf, last_ref_surface->buf, 0, 1);
+    ved_execbuf_rendec_write_address(execbuf, last_ref_surface->buf,
+        last_ref_surface->chroma_offset, 1);
 
     /* write Golden refernce picture address */
-    ved_execbuf_rendec_write_address(execbuf, golden_ref_surface->buf, golden_ref_surface->buf->buffer_ofs, 1);
-    ved_execbuf_rendec_write_address(execbuf, golden_ref_surface->buf, golden_ref_surface->buf->buffer_ofs + golden_ref_surface->chroma_offset, 1);
+    ved_execbuf_rendec_write_address(execbuf, golden_ref_surface->buf, 0, 1);
+    ved_execbuf_rendec_write_address(execbuf, golden_ref_surface->buf,
+        golden_ref_surface->chroma_offset, 1);
 
     /* write Alternate refernce picture address */
-    ved_execbuf_rendec_write_address(execbuf, alt_ref_surface->buf, alt_ref_surface->buf->buffer_ofs, 1);
-    ved_execbuf_rendec_write_address(execbuf, alt_ref_surface->buf, alt_ref_surface->buf->buffer_ofs + alt_ref_surface->chroma_offset, 1);
+    ved_execbuf_rendec_write_address(execbuf, alt_ref_surface->buf, 0, 1);
+    ved_execbuf_rendec_write_address(execbuf, alt_ref_surface->buf,
+        alt_ref_surface->chroma_offset, 1);
 
     ved_execbuf_rendec_end(execbuf);
 }
@@ -698,18 +714,23 @@ static void tng__CMDS_registers_write(context_VP8_p ctx) {
     ipvr_execbuffer_p execbuf = ctx->obj_context->execbuf;
     uint32_t reg_value;
 
-    ved_execbuf_rendec_start(execbuf, RENDEC_REGISTER_OFFSET(MSVDX_CMDS, DISPLAY_PICTURE_SIZE));
+    ved_execbuf_rendec_start(execbuf,
+        RENDEC_REGISTER_OFFSET(MSVDX_CMDS, DISPLAY_PICTURE_SIZE));
 
     /* DISPLAY_PICTURE_SIZE */
     reg_value = 0;
-    REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_CMDS, DISPLAY_PICTURE_SIZE, DISPLAY_PICTURE_WIDTH, (((ctx->pic_params->frame_width + 15) / 16) * 16) - 1);
-    REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_CMDS, DISPLAY_PICTURE_SIZE, DISPLAY_PICTURE_HEIGHT, (((ctx->pic_params->frame_height + 15) / 16) * 16) - 1);
+    REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_CMDS, DISPLAY_PICTURE_SIZE,
+        DISPLAY_PICTURE_WIDTH, (((ctx->pic_params->frame_width + 15) / 16) * 16) - 1);
+    REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_CMDS, DISPLAY_PICTURE_SIZE,
+        DISPLAY_PICTURE_HEIGHT, (((ctx->pic_params->frame_height + 15) / 16) * 16) - 1);
     ved_execbuf_rendec_write(execbuf, reg_value);
 
     /* CODED_PICTURE_SIZE */
     reg_value = 0;
-    REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_CMDS, CODED_PICTURE_SIZE, CODED_PICTURE_WIDTH, (((ctx->pic_params->frame_width + 15) / 16) * 16) - 1);
-    REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_CMDS, CODED_PICTURE_SIZE, CODED_PICTURE_HEIGHT, (((ctx->pic_params->frame_height + 15) / 16) * 16) - 1);
+    REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_CMDS, CODED_PICTURE_SIZE,
+        CODED_PICTURE_WIDTH, (((ctx->pic_params->frame_width + 15) / 16) * 16) - 1);
+    REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_CMDS, CODED_PICTURE_SIZE,
+        CODED_PICTURE_HEIGHT, (((ctx->pic_params->frame_height + 15) / 16) * 16) - 1);
     ved_execbuf_rendec_write(execbuf, reg_value);
 
     /* Set operating mode */
@@ -718,49 +739,69 @@ static void tng__CMDS_registers_write(context_VP8_p ctx) {
     ved_execbuf_rendec_end(execbuf);
 
     /* VP8_LOOP_FILTER_CONTROL */
-    ved_execbuf_rendec_start(execbuf, RENDEC_REGISTER_OFFSET(MSVDX_CMDS, VP8_LOOP_FILTER_CONTROL));
+    ved_execbuf_rendec_start(execbuf,
+        RENDEC_REGISTER_OFFSET(MSVDX_CMDS, VP8_LOOP_FILTER_CONTROL));
 
     reg_value = 0;
-    REGIO_WRITE_FIELD_LITE( reg_value, MSVDX_CMDS,  VP8_LOOP_FILTER_CONTROL,  VP8_MODE_REF_LF_DELTA_ENABLED, ctx->pic_params->pic_fields.bits.loop_filter_adj_enable);
-    REGIO_WRITE_FIELD_LITE( reg_value, MSVDX_CMDS,  VP8_LOOP_FILTER_CONTROL,  VP8_SHARPNESS_LEVEL, ctx->pic_params->pic_fields.bits.sharpness_level);
+    REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_CMDS, VP8_LOOP_FILTER_CONTROL,
+        VP8_MODE_REF_LF_DELTA_ENABLED, ctx->pic_params->pic_fields.bits.loop_filter_adj_enable);
+    REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_CMDS, VP8_LOOP_FILTER_CONTROL,
+        VP8_SHARPNESS_LEVEL, ctx->pic_params->pic_fields.bits.sharpness_level);
     ved_execbuf_rendec_write(execbuf, reg_value);
     ved_execbuf_rendec_end(execbuf); 
 
     /* VP8_LOOP_FILTER_BASELINE_LEVEL */
-    ved_execbuf_rendec_start(execbuf, RENDEC_REGISTER_OFFSET(MSVDX_CMDS, VP8_LOOP_FILTER_BASELINE_LEVEL));
+    ved_execbuf_rendec_start(execbuf,
+        RENDEC_REGISTER_OFFSET(MSVDX_CMDS, VP8_LOOP_FILTER_BASELINE_LEVEL));
     reg_value = 0;
     tng__VP8_compile_baseline_filter_data(ctx);
-    REGIO_WRITE_FIELD( reg_value, MSVDX_CMDS, VP8_LOOP_FILTER_BASELINE_LEVEL, VP8_LF_BASLINE3, ctx->baseline_filter[3] );
-    REGIO_WRITE_FIELD( reg_value, MSVDX_CMDS, VP8_LOOP_FILTER_BASELINE_LEVEL, VP8_LF_BASLINE2, ctx->baseline_filter[2]);
-    REGIO_WRITE_FIELD( reg_value, MSVDX_CMDS, VP8_LOOP_FILTER_BASELINE_LEVEL, VP8_LF_BASLINE1, ctx->baseline_filter[1]);
-    REGIO_WRITE_FIELD( reg_value, MSVDX_CMDS, VP8_LOOP_FILTER_BASELINE_LEVEL, VP8_LF_BASLINE0, ctx->baseline_filter[0]);
+    REGIO_WRITE_FIELD( reg_value, MSVDX_CMDS, VP8_LOOP_FILTER_BASELINE_LEVEL,
+        VP8_LF_BASLINE3, ctx->baseline_filter[3] );
+    REGIO_WRITE_FIELD( reg_value, MSVDX_CMDS, VP8_LOOP_FILTER_BASELINE_LEVEL,
+        VP8_LF_BASLINE2, ctx->baseline_filter[2]);
+    REGIO_WRITE_FIELD( reg_value, MSVDX_CMDS, VP8_LOOP_FILTER_BASELINE_LEVEL,
+        VP8_LF_BASLINE1, ctx->baseline_filter[1]);
+    REGIO_WRITE_FIELD( reg_value, MSVDX_CMDS, VP8_LOOP_FILTER_BASELINE_LEVEL,
+        VP8_LF_BASLINE0, ctx->baseline_filter[0]);
     ved_execbuf_rendec_write(execbuf, reg_value);
     ved_execbuf_rendec_end(execbuf);
 
     /* VP8_LOOP_FILTER_REFERENCE_DELTAS */
-    ved_execbuf_rendec_start(execbuf, RENDEC_REGISTER_OFFSET(MSVDX_CMDS, VP8_LOOP_FILTER_REFERENCE_DELTAS));
+    ved_execbuf_rendec_start(execbuf,
+    RENDEC_REGISTER_OFFSET(MSVDX_CMDS, VP8_LOOP_FILTER_REFERENCE_DELTAS));
     reg_value = 0;
-    REGIO_WRITE_FIELD(reg_value, MSVDX_CMDS, VP8_LOOP_FILTER_REFERENCE_DELTAS, VP8_REF_LF_DELTA3, ctx->pic_params->loop_filter_deltas_ref_frame[3]);
-    REGIO_WRITE_FIELD(reg_value, MSVDX_CMDS, VP8_LOOP_FILTER_REFERENCE_DELTAS, VP8_REF_LF_DELTA2, ctx->pic_params->loop_filter_deltas_ref_frame[2]);
-    REGIO_WRITE_FIELD(reg_value, MSVDX_CMDS, VP8_LOOP_FILTER_REFERENCE_DELTAS, VP8_REF_LF_DELTA1, ctx->pic_params->loop_filter_deltas_ref_frame[1]);
-    REGIO_WRITE_FIELD(reg_value, MSVDX_CMDS, VP8_LOOP_FILTER_REFERENCE_DELTAS, VP8_REF_LF_DELTA0, ctx->pic_params->loop_filter_deltas_ref_frame[0]);
+    REGIO_WRITE_FIELD(reg_value, MSVDX_CMDS, VP8_LOOP_FILTER_REFERENCE_DELTAS,
+        VP8_REF_LF_DELTA3, ctx->pic_params->loop_filter_deltas_ref_frame[3]);
+    REGIO_WRITE_FIELD(reg_value, MSVDX_CMDS, VP8_LOOP_FILTER_REFERENCE_DELTAS,
+        VP8_REF_LF_DELTA2, ctx->pic_params->loop_filter_deltas_ref_frame[2]);
+    REGIO_WRITE_FIELD(reg_value, MSVDX_CMDS, VP8_LOOP_FILTER_REFERENCE_DELTAS,
+        VP8_REF_LF_DELTA1, ctx->pic_params->loop_filter_deltas_ref_frame[1]);
+    REGIO_WRITE_FIELD(reg_value, MSVDX_CMDS, VP8_LOOP_FILTER_REFERENCE_DELTAS,
+        VP8_REF_LF_DELTA0, ctx->pic_params->loop_filter_deltas_ref_frame[0]);
     ved_execbuf_rendec_write(execbuf, reg_value);
     ved_execbuf_rendec_end(execbuf);
 
     /* VP8_LOOP_FILTER_MODE_DELTAS */
-    ved_execbuf_rendec_start(execbuf, RENDEC_REGISTER_OFFSET(MSVDX_CMDS, VP8_LOOP_FILTER_MODE_DELTAS));
+    ved_execbuf_rendec_start(execbuf,
+        RENDEC_REGISTER_OFFSET(MSVDX_CMDS, VP8_LOOP_FILTER_MODE_DELTAS));
     reg_value = 0;
-    REGIO_WRITE_FIELD( reg_value, MSVDX_CMDS, VP8_LOOP_FILTER_MODE_DELTAS, VP8_MODE_LF_DELTA3, ctx->pic_params->loop_filter_deltas_mode[3]);
-    REGIO_WRITE_FIELD( reg_value, MSVDX_CMDS, VP8_LOOP_FILTER_MODE_DELTAS, VP8_MODE_LF_DELTA2, ctx->pic_params->loop_filter_deltas_mode[2]);
-    REGIO_WRITE_FIELD( reg_value, MSVDX_CMDS, VP8_LOOP_FILTER_MODE_DELTAS, VP8_MODE_LF_DELTA1, ctx->pic_params->loop_filter_deltas_mode[1]);
-    REGIO_WRITE_FIELD( reg_value, MSVDX_CMDS, VP8_LOOP_FILTER_MODE_DELTAS, VP8_MODE_LF_DELTA0, ctx->pic_params->loop_filter_deltas_mode[0]);
+    REGIO_WRITE_FIELD( reg_value, MSVDX_CMDS, VP8_LOOP_FILTER_MODE_DELTAS,
+        VP8_MODE_LF_DELTA3, ctx->pic_params->loop_filter_deltas_mode[3]);
+    REGIO_WRITE_FIELD( reg_value, MSVDX_CMDS, VP8_LOOP_FILTER_MODE_DELTAS,
+        VP8_MODE_LF_DELTA2, ctx->pic_params->loop_filter_deltas_mode[2]);
+    REGIO_WRITE_FIELD( reg_value, MSVDX_CMDS, VP8_LOOP_FILTER_MODE_DELTAS,
+        VP8_MODE_LF_DELTA1, ctx->pic_params->loop_filter_deltas_mode[1]);
+    REGIO_WRITE_FIELD( reg_value, MSVDX_CMDS, VP8_LOOP_FILTER_MODE_DELTAS,
+        VP8_MODE_LF_DELTA0, ctx->pic_params->loop_filter_deltas_mode[0]);
     ved_execbuf_rendec_write(execbuf, reg_value);
     ved_execbuf_rendec_end(execbuf); 
 
     ved_execbuf_rendec_start(execbuf, RENDEC_REGISTER_OFFSET(MSVDX_CMDS, MC_CACHE_CONFIGURATION));
     reg_value = 0;
-    REGIO_WRITE_FIELD_LITE( reg_value, MSVDX_CMDS, MC_CACHE_CONFIGURATION, CONFIG_REF_OFFSET, ctx->cache_ref_offset);
-    REGIO_WRITE_FIELD_LITE( reg_value, MSVDX_CMDS, MC_CACHE_CONFIGURATION, CONFIG_ROW_OFFSET, ctx->cache_row_offset);
+    REGIO_WRITE_FIELD_LITE( reg_value, MSVDX_CMDS, MC_CACHE_CONFIGURATION,
+        CONFIG_REF_OFFSET, ctx->cache_ref_offset);
+    REGIO_WRITE_FIELD_LITE( reg_value, MSVDX_CMDS, MC_CACHE_CONFIGURATION,
+        CONFIG_ROW_OFFSET, ctx->cache_row_offset);
     ved_execbuf_rendec_write(execbuf, reg_value);
     ved_execbuf_rendec_end(execbuf); 
 
@@ -768,8 +809,9 @@ static void tng__CMDS_registers_write(context_VP8_p ctx) {
     /* ipvr_surface_p golden_ref_surface = ctx->golden_ref_picture->ipvr_surface; */
 
     /* rendec block */
-    ved_execbuf_rendec_start(execbuf, RENDEC_REGISTER_OFFSET(MSVDX_CMDS, INTRA_BUFFER_BASE_ADDRESS));
-    ved_execbuf_rendec_write_address(execbuf, ctx->intra_buffer, ctx->intra_buffer->buffer_ofs, 0);
+    ved_execbuf_rendec_start(execbuf,
+        RENDEC_REGISTER_OFFSET(MSVDX_CMDS, INTRA_BUFFER_BASE_ADDRESS));
+    ved_execbuf_rendec_write_address(execbuf, ctx->intra_buffer, 0, 0);
     ved_execbuf_rendec_end(execbuf);
 
     vld_dec_setup_alternative_frame(ctx->obj_context);  /* port from CVldDecoder::ProgramOutputModeRegisters */
@@ -782,8 +824,10 @@ static void tng__VP8_set_slice_param(context_VP8_p ctx) {
         ved_execbuf_rendec_start(execbuf, RENDEC_REGISTER_OFFSET(MSVDX_CMDS, SLICE_PARAMS)  );
 
         ctx->cmd_slice_params = 0;
-        REGIO_WRITE_FIELD_LITE( ctx->cmd_slice_params, MSVDX_CMDS, SLICE_PARAMS, SLICE_FIELD_TYPE, 0x02 ); // always a frame
-        REGIO_WRITE_FIELD_LITE( ctx->cmd_slice_params, MSVDX_CMDS, SLICE_PARAMS, SLICE_CODE_TYPE, (ctx->pic_params->pic_fields.bits.key_frame == 0)? 0 : 1 );
+        REGIO_WRITE_FIELD_LITE( ctx->cmd_slice_params, MSVDX_CMDS, SLICE_PARAMS,
+            SLICE_FIELD_TYPE, 0x02 ); // always a frame
+        REGIO_WRITE_FIELD_LITE( ctx->cmd_slice_params, MSVDX_CMDS, SLICE_PARAMS,
+            SLICE_CODE_TYPE, (ctx->pic_params->pic_fields.bits.key_frame == 0)? 0 : 1 );
 
         ved_execbuf_rendec_write(execbuf, ctx->cmd_slice_params);
         ved_execbuf_rendec_end(execbuf);
@@ -799,8 +843,11 @@ static void tng__VP8_set_slice_param(context_VP8_p ctx) {
     }
 
     /* if VP8 bitstream is multi-partitioned then convey all the info including buffer offest information for 2nd partition to the firmware  */
-    (*ctx->dec_ctx.cmd_params) |= ((ctx->slice_params->partition_size[0] + (ctx->pic_params->bool_coder_ctx.count & 0x07 ? 1 : 0) + (ctx->slice_params->macroblock_offset >> 3)) & VP8_BUFFOFFSET_MASK);
-    (*ctx->dec_ctx.cmd_params) |= (((ctx->slice_params->num_of_partitions - 1) << VP8_PARTITIONSCOUNT_SHIFT) & VP8_PARTITIONSCOUNT_MASK) ; /* if the bistream is multistream */
+    (*ctx->dec_ctx.cmd_params) |= ((ctx->slice_params->partition_size[0]
+        + (ctx->pic_params->bool_coder_ctx.count & 0x07 ? 1 : 0)
+        + (ctx->slice_params->macroblock_offset >> 3)) & VP8_BUFFOFFSET_MASK);
+    (*ctx->dec_ctx.cmd_params) |= (((ctx->slice_params->num_of_partitions - 1)
+        << VP8_PARTITIONSCOUNT_SHIFT) & VP8_PARTITIONSCOUNT_MASK) ; /* if the bistream is multistream */
 }
 
 static void tng__VP8_FE_Registers_Write(context_VP8_p ctx) {
@@ -819,48 +866,80 @@ static void tng__VP8_FE_Registers_Write(context_VP8_p ctx) {
         ved_execbuf_reg_start_block(execbuf, 0);
         reg_value=0;
 
-        REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_FE_PIC0, VP8_FE_FRAME_TYPE, (ctx->pic_params->pic_fields.bits.key_frame == 0)? 0 : 1 );
-        REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_FE_PIC0, VP8_FE_UPDATE_SEGMENTATION_MAP, (ctx->pic_params->pic_fields.bits.update_mb_segmentation_map == 0 )? 0 : 1 );
-        REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_FE_PIC0, VP8_FE_NUM_PARTITION_MINUS1, ctx->slice_params->num_of_partitions - 2);
+        REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_FE_PIC0,
+            VP8_FE_FRAME_TYPE, (ctx->pic_params->pic_fields.bits.key_frame == 0)? 0 : 1 );
+        REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_FE_PIC0,
+            VP8_FE_UPDATE_SEGMENTATION_MAP, (ctx->pic_params->pic_fields.bits.update_mb_segmentation_map == 0 )? 0 : 1 );
+        REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_FE_PIC0,
+            VP8_FE_NUM_PARTITION_MINUS1, ctx->slice_params->num_of_partitions - 2);
 
        /* SEGMENTATION ID CONTROL */
        if(ctx->pic_params->pic_fields.bits.segmentation_enabled) {
             if(ctx->pic_params->pic_fields.bits.update_segment_feature_data) {
-                REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_FE_PIC0, VP8_FE_SEG_ID_CTRL, 2); // current
+                REGIO_WRITE_FIELD_LITE(reg_value,
+                    MSVDX_VEC_VP8, CR_VEC_VP8_FE_PIC0, VP8_FE_SEG_ID_CTRL, 2); // current
             } else {
-                REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_FE_PIC0, VP8_FE_SEG_ID_CTRL, 1); // previous
+                REGIO_WRITE_FIELD_LITE(reg_value,
+                    MSVDX_VEC_VP8, CR_VEC_VP8_FE_PIC0, VP8_FE_SEG_ID_CTRL, 1); // previous
             }
        } else {
-            REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_FE_PIC0, VP8_FE_SEG_ID_CTRL, 0); // none
+            REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8,
+                CR_VEC_VP8_FE_PIC0, VP8_FE_SEG_ID_CTRL, 0); // none
        }
 
-       ved_execbuf_reg_set(execbuf, REGISTER_OFFSET(MSVDX_VEC_VP8, CR_VEC_VP8_FE_PIC0), reg_value);
+       ved_execbuf_reg_set(execbuf,
+               REGISTER_OFFSET(MSVDX_VEC_VP8, CR_VEC_VP8_FE_PIC0), reg_value);
 
        reg_value=0;
-       REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_FE_PIC1, VP8_FE_PIC_HEIGHT_IN_MBS_LESS1,((ctx->pic_params->frame_height + 15 )>> 4) - 1);
-       REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_FE_PIC1, VP8_FE_PIC_WIDTH_IN_MBS_LESS1, ((ctx->pic_params->frame_width + 15) >> 4) - 1 );
-       ved_execbuf_reg_set(execbuf, REGISTER_OFFSET(MSVDX_VEC_VP8, CR_VEC_VP8_FE_PIC1), reg_value);
+       REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_FE_PIC1,
+               VP8_FE_PIC_HEIGHT_IN_MBS_LESS1,((ctx->pic_params->frame_height + 15 )>> 4) - 1);
+       REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_FE_PIC1,
+               VP8_FE_PIC_WIDTH_IN_MBS_LESS1, ((ctx->pic_params->frame_width + 15) >> 4) - 1 );
+       ved_execbuf_reg_set(execbuf, REGISTER_OFFSET(MSVDX_VEC_VP8,
+               CR_VEC_VP8_FE_PIC1), reg_value);
 
        reg_value=0;
        /* Important for VP8_FE_DECODE_PRED_NOT_COEFFS. First partition always has macroblock level data. See PDF, p. 34. */
-       REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_FE_PIC2, VP8_FE_DECODE_PRED_NOT_COEFFS, 1);
-       REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_FE_PIC2, VP8_FE_MB_NO_COEFF_SKIP, ctx->pic_params->pic_fields.bits.mb_no_coeff_skip);
-       REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_FE_PIC2, VP8_FE_SIGN_BIAS_FOR_GF, ctx->pic_params->pic_fields.bits.sign_bias_golden);
-       REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_FE_PIC2, VP8_FE_SIGN_BIAS_FOR_ALTREF, ctx->pic_params->pic_fields.bits.sign_bias_alternate);
+       REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_FE_PIC2,
+               VP8_FE_DECODE_PRED_NOT_COEFFS, 1);
+       REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_FE_PIC2,
+               VP8_FE_MB_NO_COEFF_SKIP, ctx->pic_params->pic_fields.bits.mb_no_coeff_skip);
+       REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_FE_PIC2,
+               VP8_FE_SIGN_BIAS_FOR_GF, ctx->pic_params->pic_fields.bits.sign_bias_golden);
+       REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_FE_PIC2,
+               VP8_FE_SIGN_BIAS_FOR_ALTREF, ctx->pic_params->pic_fields.bits.sign_bias_alternate);
        ved_execbuf_reg_set(execbuf, REGISTER_OFFSET(MSVDX_VEC_VP8, CR_VEC_VP8_FE_PIC2), reg_value);
 
        reg_value=0;
-       REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_FE_MB_SEGMENT_PROBS, VP8_FE_SEGMENT_ID_PROB0, ctx->pic_params->mb_segment_tree_probs[0]);
-       REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_FE_MB_SEGMENT_PROBS, VP8_FE_SEGMENT_ID_PROB1, ctx->pic_params->mb_segment_tree_probs[1]);
-       REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_FE_MB_SEGMENT_PROBS, VP8_FE_SEGMENT_ID_PROB2, ctx->pic_params->mb_segment_tree_probs[2]);
-       ved_execbuf_reg_set(execbuf, REGISTER_OFFSET (MSVDX_VEC_VP8, CR_VEC_VP8_FE_MB_SEGMENT_PROBS), reg_value);
+       REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8,
+               CR_VEC_VP8_FE_MB_SEGMENT_PROBS, VP8_FE_SEGMENT_ID_PROB0,
+               ctx->pic_params->mb_segment_tree_probs[0]);
+       REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8,
+               CR_VEC_VP8_FE_MB_SEGMENT_PROBS, VP8_FE_SEGMENT_ID_PROB1,
+               ctx->pic_params->mb_segment_tree_probs[1]);
+       REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8,
+               CR_VEC_VP8_FE_MB_SEGMENT_PROBS, VP8_FE_SEGMENT_ID_PROB2,
+               ctx->pic_params->mb_segment_tree_probs[2]);
+       ved_execbuf_reg_set(execbuf,
+               REGISTER_OFFSET (MSVDX_VEC_VP8, CR_VEC_VP8_FE_MB_SEGMENT_PROBS),
+               reg_value);
 
        reg_value = 0;
-       REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_FE_MB_FLAGS_PROBS, VP8_FE_SKIP_PROB, ctx->pic_params->prob_skip_false);
-       REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_FE_MB_FLAGS_PROBS, VP8_FE_INTRA_MB_PROB, ctx->pic_params->prob_intra);
-       REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_FE_MB_FLAGS_PROBS, VP8_FE_LAST_FRAME_PROB, ctx->pic_params->prob_last);
-       REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_FE_MB_FLAGS_PROBS, VP8_FE_GOLDEN_FRAME_PROB, ctx->pic_params->prob_gf);
-       ved_execbuf_reg_set(execbuf, REGISTER_OFFSET (MSVDX_VEC_VP8, CR_VEC_VP8_FE_MB_FLAGS_PROBS), reg_value);
+       REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8,
+               CR_VEC_VP8_FE_MB_FLAGS_PROBS, VP8_FE_SKIP_PROB,
+               ctx->pic_params->prob_skip_false);
+       REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8,
+               CR_VEC_VP8_FE_MB_FLAGS_PROBS, VP8_FE_INTRA_MB_PROB,
+               ctx->pic_params->prob_intra);
+       REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8,
+               CR_VEC_VP8_FE_MB_FLAGS_PROBS, VP8_FE_LAST_FRAME_PROB,
+               ctx->pic_params->prob_last);
+       REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8,
+               CR_VEC_VP8_FE_MB_FLAGS_PROBS, VP8_FE_GOLDEN_FRAME_PROB,
+               ctx->pic_params->prob_gf);
+       ved_execbuf_reg_set(execbuf,
+               REGISTER_OFFSET (MSVDX_VEC_VP8, CR_VEC_VP8_FE_MB_FLAGS_PROBS),
+               reg_value);
        ved_execbuf_reg_end_block(execbuf);
     }
 
@@ -871,26 +950,31 @@ static void tng__VP8_FE_Registers_Write(context_VP8_p ctx) {
 
         /* ipvr_buffer_p* const ctx->MB_flags_buffer = ctx->MB_flags_buffer.buffer_ofs; */
         /* unsigned int MB_flags_buffer_alloc = ctx->MB_flags_buffer.buffer_ofs; */
-        ved_execbuf_reg_set_address(execbuf, RENDEC_REGISTER_OFFSET(MSVDX_VEC_VP8, CR_VEC_VP8_FE_PIC_MB_FLAGS_BASE_ADDRESS),
-                           ctx->MB_flags_buffer, ctx->MB_flags_buffer->buffer_ofs);
+        ved_execbuf_reg_set_address(execbuf,
+            RENDEC_REGISTER_OFFSET(MSVDX_VEC_VP8, CR_VEC_VP8_FE_PIC_MB_FLAGS_BASE_ADDRESS),
+            ctx->MB_flags_buffer, 0);
         ved_execbuf_reg_end_block(execbuf);
    }
 
    {  
         ipvr_execbuffer_p execbuf = ctx->obj_context->execbuf;
         ved_execbuf_reg_start_block(execbuf, 0);
-        ved_execbuf_reg_set_address(execbuf, RENDEC_REGISTER_OFFSET(MSVDX_VEC_VP8, CR_VEC_VP8_FE_SEG_ID_BASE_ADDRESS), ctx->segID_buffer, ctx->segID_buffer->buffer_ofs);
+        ved_execbuf_reg_set_address(execbuf,
+            RENDEC_REGISTER_OFFSET(MSVDX_VEC_VP8, CR_VEC_VP8_FE_SEG_ID_BASE_ADDRESS),
+            ctx->segID_buffer, 0);
         ved_execbuf_reg_end_block(execbuf);
    }
 
    {
        /* add the first partition offset */
        ved_execbuf_reg_start_block(execbuf, 0);
-
-       ctx->DCT_Base_Address_Offset = (ctx->slice_params->partition_size[0] + (ctx->pic_params->bool_coder_ctx.count & 0x07 ? 1 : 0) + (ctx->slice_params->macroblock_offset >> 3)) + 3 * (ctx->slice_params->num_of_partitions - 2) ;
-       /* REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_FE_DCT_BASE_ADDRESS, VP8_FE_DCT_BASE_ADDRESS, ctx->DCT_Base_Address); */
-       ved_execbuf_reg_set_address(execbuf, REGISTER_OFFSET (MSVDX_VEC_VP8, CR_VEC_VP8_FE_DCT_BASE_ADDRESS),
-                  ctx->dec_ctx.slice_data_buffer, ctx->DCT_Base_Address_Offset);
+       ctx->DCT_Base_Address_Offset = (ctx->slice_params->partition_size[0]
+               + (ctx->pic_params->bool_coder_ctx.count & 0x07 ? 1 : 0)
+               + (ctx->slice_params->macroblock_offset >> 3))
+               + 3 * (ctx->slice_params->num_of_partitions - 2) ;
+       ved_execbuf_reg_set_address(execbuf,
+               REGISTER_OFFSET (MSVDX_VEC_VP8, CR_VEC_VP8_FE_DCT_BASE_ADDRESS),
+            ctx->dec_ctx.slice_data_buffer, ctx->DCT_Base_Address_Offset);
        ved_execbuf_reg_end_block(execbuf);
    }
 
@@ -902,73 +986,90 @@ static void tng__VP8_BE_Registers_Write(context_VP8_p ctx) {
 
     {
         /* BE Section */
-        ved_execbuf_rendec_start(execbuf, RENDEC_REGISTER_OFFSET(MSVDX_VEC, CR_VEC_ENTDEC_BE_CONTROL));
+        ved_execbuf_rendec_start(execbuf,
+            RENDEC_REGISTER_OFFSET(MSVDX_VEC, CR_VEC_ENTDEC_BE_CONTROL));
         ved_execbuf_rendec_write(execbuf, RegEntdecFeControl);
         ved_execbuf_rendec_end(execbuf);
     }
 
     {
         /* PIC0 */
-        ved_execbuf_rendec_start(execbuf, RENDEC_REGISTER_OFFSET(MSVDX_VEC_VP8, CR_VEC_VP8_BE_PIC0));
+        ved_execbuf_rendec_start(execbuf,
+            RENDEC_REGISTER_OFFSET(MSVDX_VEC_VP8, CR_VEC_VP8_BE_PIC0));
         reg_value = 0;
-        REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_BE_PIC0, VP8_BE_FRAME_TYPE, (ctx->pic_params->pic_fields.bits.key_frame == 0)? 0 : 1);
+        REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_BE_PIC0,
+            VP8_BE_FRAME_TYPE, (ctx->pic_params->pic_fields.bits.key_frame == 0)? 0 : 1);
         ved_execbuf_rendec_write(execbuf, reg_value);
 
         /* PIC1 */
         // ved_execbuf_rendec_start(execbuf, RENDEC_REGISTER_OFFSET(MSVDX_VEC_VP8, CR_VEC_VP8_BE_PIC1));
         reg_value = 0;
-        REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_BE_PIC1, VP8_BE_PIC_HEIGHT_IN_MBS_LESS1, ((ctx->pic_params->frame_height + 15) >> 4) - 1);
-        REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_BE_PIC1, VP8_BE_PIC_WIDTH_IN_MBS_LESS1, ((ctx->pic_params->frame_width + 15) >> 4) - 1);
+        REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_BE_PIC1,
+            VP8_BE_PIC_HEIGHT_IN_MBS_LESS1, ((ctx->pic_params->frame_height + 15) >> 4) - 1);
+        REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_BE_PIC1,
+            VP8_BE_PIC_WIDTH_IN_MBS_LESS1, ((ctx->pic_params->frame_width + 15) >> 4) - 1);
         ved_execbuf_rendec_write(execbuf, reg_value);
         ved_execbuf_rendec_end(execbuf);
     }
 
     {
         /* PIC2 */
-        ved_execbuf_rendec_start(execbuf, RENDEC_REGISTER_OFFSET(MSVDX_VEC_VP8, CR_VEC_VP8_BE_PIC2));
+        ved_execbuf_rendec_start(execbuf,
+            RENDEC_REGISTER_OFFSET(MSVDX_VEC_VP8, CR_VEC_VP8_BE_PIC2));
         reg_value = 0;
-        REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_BE_PIC2, VP8_BE_DECODE_PRED_NOT_COEFFS, 1);
-        // REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_BE_PIC2, VP8_BE_USE_STORED_SEGMENT_MAP, 1);
+        REGIO_WRITE_FIELD_LITE(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_BE_PIC2,
+            VP8_BE_DECODE_PRED_NOT_COEFFS, 1);
         ved_execbuf_rendec_write(execbuf, reg_value);
         ved_execbuf_rendec_end(execbuf);
     }
 
     {
-        ved_execbuf_rendec_start(execbuf, RENDEC_REGISTER_OFFSET(MSVDX_VEC_VP8, CR_VEC_VP8_BE_QINDEXMAP));
+        ved_execbuf_rendec_start(execbuf,
+            RENDEC_REGISTER_OFFSET(MSVDX_VEC_VP8, CR_VEC_VP8_BE_QINDEXMAP));
         tng__VP8_compile_qindex_data(ctx);
         /* QINDEX MAP */
         reg_value = 0;
-        REGIO_WRITE_FIELD(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_BE_QINDEXMAP, VP8_BE_QINDEX_SEG0_DEFAULT, ctx->q_index[0]);
-        REGIO_WRITE_FIELD(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_BE_QINDEXMAP, VP8_BE_QINDEX_SEG1        , ctx->q_index[1]);
-        REGIO_WRITE_FIELD(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_BE_QINDEXMAP, VP8_BE_QINDEX_SEG2        , ctx->q_index[2]);
-        REGIO_WRITE_FIELD(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_BE_QINDEXMAP, VP8_BE_QINDEX_SEG3        , ctx->q_index[3]);
+        REGIO_WRITE_FIELD(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_BE_QINDEXMAP,
+            VP8_BE_QINDEX_SEG0_DEFAULT, ctx->q_index[0]);
+        REGIO_WRITE_FIELD(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_BE_QINDEXMAP,
+            VP8_BE_QINDEX_SEG1        , ctx->q_index[1]);
+        REGIO_WRITE_FIELD(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_BE_QINDEXMAP,
+            VP8_BE_QINDEX_SEG2        , ctx->q_index[2]);
+        REGIO_WRITE_FIELD(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_BE_QINDEXMAP,
+            VP8_BE_QINDEX_SEG3        , ctx->q_index[3]);
         ved_execbuf_rendec_write(execbuf, reg_value);
         ved_execbuf_rendec_end(execbuf);
     }
 
     {
-        ved_execbuf_rendec_start(execbuf, RENDEC_REGISTER_OFFSET(MSVDX_VEC_VP8, CR_VEC_VP8_BE_QDELTAS));
+        ved_execbuf_rendec_start(execbuf,
+            RENDEC_REGISTER_OFFSET(MSVDX_VEC_VP8, CR_VEC_VP8_BE_QDELTAS));
         /* QDELTAS - this was removed in msvdx_vec_vp8_regs.def in 1.11 */
         reg_value = 0;
         uint16_t Y1_DC_Delta;
         Y1_DC_Delta = ctx->iq_params->quantization_index[0][1] - ctx->iq_params->quantization_index[0][0];
-        REGIO_WRITE_FIELD(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_BE_QDELTAS, VP8_BE_YDC_DELTA, Y1_DC_Delta);
+        REGIO_WRITE_FIELD(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_BE_QDELTAS,
+            VP8_BE_YDC_DELTA, Y1_DC_Delta);
 
         uint16_t Y2_DC_Delta;
         Y2_DC_Delta  = ctx->iq_params->quantization_index[0][2] - ctx->iq_params->quantization_index[0][0];
-        REGIO_WRITE_FIELD(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_BE_QDELTAS, VP8_BE_Y2DC_DELTA, Y2_DC_Delta);
+        REGIO_WRITE_FIELD(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_BE_QDELTAS,
+            VP8_BE_Y2DC_DELTA, Y2_DC_Delta);
 
         uint16_t Y2_AC_Delta;
         Y2_AC_Delta = ctx->iq_params->quantization_index[0][3] - ctx->iq_params->quantization_index[0][0];
-        REGIO_WRITE_FIELD(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_BE_QDELTAS, VP8_BE_Y2AC_DELTA, Y2_AC_Delta);
+        REGIO_WRITE_FIELD(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_BE_QDELTAS,
+            VP8_BE_Y2AC_DELTA, Y2_AC_Delta);
 
        uint16_t UV_DC_Delta;
         UV_DC_Delta = ctx->iq_params->quantization_index[0][4] - ctx->iq_params->quantization_index[0][0];
-        REGIO_WRITE_FIELD(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_BE_QDELTAS, VP8_BE_UVDC_DELTA, UV_DC_Delta);
+        REGIO_WRITE_FIELD(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_BE_QDELTAS,
+            VP8_BE_UVDC_DELTA, UV_DC_Delta);
 
         uint16_t UV_AC_Delta;
         UV_AC_Delta = ctx->iq_params->quantization_index[0][5] - ctx->iq_params->quantization_index[0][0];
-        REGIO_WRITE_FIELD(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_BE_QDELTAS, VP8_BE_UVAC_DELTA, UV_AC_Delta);
+        REGIO_WRITE_FIELD(reg_value, MSVDX_VEC_VP8, CR_VEC_VP8_BE_QDELTAS,
+            VP8_BE_UVAC_DELTA, UV_AC_Delta);
 
         ved_execbuf_rendec_write(execbuf, reg_value);
         ved_execbuf_rendec_end(execbuf);
@@ -976,15 +1077,17 @@ static void tng__VP8_BE_Registers_Write(context_VP8_p ctx) {
 
     {  
         ipvr_execbuffer_p execbuf = ctx->obj_context->execbuf;
-        ved_execbuf_rendec_start(execbuf, RENDEC_REGISTER_OFFSET(MSVDX_VEC_VP8, CR_VEC_VP8_BE_BASE_ADDR_1STPART_PIC));
-        ved_execbuf_rendec_write_address(execbuf, ctx->buffer_1st_part, ctx->buffer_1st_part->buffer_ofs, 0);
+        ved_execbuf_rendec_start(execbuf,
+            RENDEC_REGISTER_OFFSET(MSVDX_VEC_VP8, CR_VEC_VP8_BE_BASE_ADDR_1STPART_PIC));
+        ved_execbuf_rendec_write_address(execbuf, ctx->buffer_1st_part, 0, 0);
         ved_execbuf_rendec_end(execbuf);
     }
 
     {  
         ipvr_execbuffer_p execbuf = ctx->obj_context->execbuf;
-        ved_execbuf_rendec_start(execbuf, RENDEC_REGISTER_OFFSET(MSVDX_VEC_VP8, CR_VEC_VP8_BE_BASE_ADDR_CURR));
-        ved_execbuf_rendec_write_address(execbuf, ctx->cur_pic_buffer, ctx->cur_pic_buffer->buffer_ofs, 0);
+        ved_execbuf_rendec_start(execbuf,
+            RENDEC_REGISTER_OFFSET(MSVDX_VEC_VP8, CR_VEC_VP8_BE_BASE_ADDR_CURR));
+        ved_execbuf_rendec_write_address(execbuf, ctx->cur_pic_buffer, 0, 0);
         ved_execbuf_rendec_end(execbuf);
     }
 }
@@ -1002,23 +1105,31 @@ static void tng__VP8_set_bool_coder_context(context_VP8_p ctx) {
         /* Entdec Front-End controls*/
         ved_execbuf_reg_start_block(execbuf, 0);
 
-        REGIO_WRITE_FIELD_LITE (bool_init, MSVDX_VEC, CR_VEC_BOOL_INIT, BOOL_INIT_RANGE, ctx->pic_params->bool_coder_ctx.range);
-        REGIO_WRITE_FIELD_LITE (bool_init, MSVDX_VEC, CR_VEC_BOOL_INIT, BOOL_INIT_VALUE, (ctx->pic_params->bool_coder_ctx.value) & 0xff);  /* Set only MSB of value param of bool context */
-        ved_execbuf_reg_set(execbuf, REGISTER_OFFSET(MSVDX_VEC, CR_VEC_BOOL_INIT), bool_init);
+        REGIO_WRITE_FIELD_LITE (bool_init, MSVDX_VEC, CR_VEC_BOOL_INIT,
+            BOOL_INIT_RANGE, ctx->pic_params->bool_coder_ctx.range);
+        REGIO_WRITE_FIELD_LITE (bool_init, MSVDX_VEC, CR_VEC_BOOL_INIT,
+            BOOL_INIT_VALUE, (ctx->pic_params->bool_coder_ctx.value) & 0xff);  /* Set only MSB of value param of bool context */
+        ved_execbuf_reg_set(execbuf,
+            REGISTER_OFFSET(MSVDX_VEC, CR_VEC_BOOL_INIT), bool_init);
         ved_execbuf_reg_end_block(execbuf);
     }
 
     {
         ved_execbuf_reg_start_block(execbuf, 0);
-        REGIO_WRITE_FIELD_LITE(bool_ctrl, MSVDX_VEC, CR_VEC_BOOL_CTRL, BOOL_MASTER_SELECT, 0x02);
-        ved_execbuf_reg_set(execbuf, REGISTER_OFFSET(MSVDX_VEC, CR_VEC_BOOL_CTRL), bool_ctrl);
+        REGIO_WRITE_FIELD_LITE(bool_ctrl, MSVDX_VEC, CR_VEC_BOOL_CTRL,
+            BOOL_MASTER_SELECT, 0x02);
+        ved_execbuf_reg_set(execbuf,
+            REGISTER_OFFSET(MSVDX_VEC, CR_VEC_BOOL_CTRL), bool_ctrl);
         ved_execbuf_reg_end_block(execbuf);
     }
 
     {
-        ved_execbuf_rendec_start(execbuf, RENDEC_REGISTER_OFFSET(MSVDX_CMDS, MC_CACHE_CONFIGURATION));
-        REGIO_WRITE_FIELD_LITE( reg_value, MSVDX_CMDS, MC_CACHE_CONFIGURATION, CONFIG_REF_OFFSET, ctx->cache_ref_offset);
-        REGIO_WRITE_FIELD_LITE( reg_value, MSVDX_CMDS, MC_CACHE_CONFIGURATION, CONFIG_ROW_OFFSET, ctx->cache_row_offset);
+        ved_execbuf_rendec_start(execbuf,
+            RENDEC_REGISTER_OFFSET(MSVDX_CMDS, MC_CACHE_CONFIGURATION));
+        REGIO_WRITE_FIELD_LITE( reg_value, MSVDX_CMDS, MC_CACHE_CONFIGURATION,
+            CONFIG_REF_OFFSET, ctx->cache_ref_offset);
+        REGIO_WRITE_FIELD_LITE( reg_value, MSVDX_CMDS, MC_CACHE_CONFIGURATION,
+            CONFIG_ROW_OFFSET, ctx->cache_row_offset);
         ved_execbuf_rendec_write(execbuf, reg_value);
         ved_execbuf_rendec_end(execbuf);
     }
@@ -1027,7 +1138,8 @@ static void tng__VP8_set_bool_coder_context(context_VP8_p ctx) {
 /***********************************************************************************
 * Description        : Write probability data in buffer according to MSVDX setting.
 ************************************************************************************/
-static void tng_KeyFrame_BModeProbsDataCompile(const Probability* ui8_probs_to_write, uint32_t* ui32_probs_buffer) {
+static void
+tng_KeyFrame_BModeProbsDataCompile(const Probability* ui8_probs_to_write, uint32_t* ui32_probs_buffer) {
     uint32_t dim0, dim1;
     uint32_t i, j, address;
     uint32_t src_tab_offset = 0;
@@ -1055,7 +1167,8 @@ static void tng_KeyFrame_BModeProbsDataCompile(const Probability* ui8_probs_to_w
 /***********************************************************************************
 * Description        : Write probability data in buffer according to MSVDX setting.
 ************************************************************************************/
-static void tng_InterFrame_YModeProbsDataCompile(const Probability* ui8_probs_to_write, uint32_t* ui32_probs_buffer) {
+static void
+tng_InterFrame_YModeProbsDataCompile(const Probability* ui8_probs_to_write, uint32_t* ui32_probs_buffer) {
     *(ui32_probs_buffer) =      (uint32_t)ui8_probs_to_write[CABAC_LSR_InterFrame_YModeProb_ToIdxMap[0]]
                             |   (uint32_t)ui8_probs_to_write[CABAC_LSR_InterFrame_YModeProb_ToIdxMap[1]] << 8
                             |   (uint32_t)ui8_probs_to_write[CABAC_LSR_InterFrame_YModeProb_ToIdxMap[2]] << 16
@@ -1065,7 +1178,8 @@ static void tng_InterFrame_YModeProbsDataCompile(const Probability* ui8_probs_to
 /***********************************************************************************
 * Description        : Write probability data in buffer according to MSVDX setting.
 ************************************************************************************/
-static void tng_InterFrame_UVModeProbsDataCompile(const Probability* ui8_probs_to_write, uint32_t* ui32_probs_buffer) {
+static void
+tng_InterFrame_UVModeProbsDataCompile(const Probability* ui8_probs_to_write, uint32_t* ui32_probs_buffer) {
     *(ui32_probs_buffer) =      (uint32_t)ui8_probs_to_write[CABAC_LSR_InterFrame_UVModeProb_ToIdxMap[0]]
                             |   (uint32_t)ui8_probs_to_write[CABAC_LSR_InterFrame_UVModeProb_ToIdxMap[1]] << 8
                             |   (uint32_t)ui8_probs_to_write[CABAC_LSR_InterFrame_UVModeProb_ToIdxMap[2]] << 16;
@@ -1074,7 +1188,8 @@ static void tng_InterFrame_UVModeProbsDataCompile(const Probability* ui8_probs_t
 /***********************************************************************************
 * Description        : Write probability data in buffer according to MSVDX setting.
 ************************************************************************************/
-static void tng_InterFrame_MVContextProbsDataCompile(uint8_t* ui8_probs_to_write, uint32_t* ui32_probs_buffer) {
+static void
+tng_InterFrame_MVContextProbsDataCompile(uint8_t* ui8_probs_to_write, uint32_t* ui32_probs_buffer) {
     uint32_t dim0;
     uint32_t i, j, address;
     uint32_t src_tab_offset = 0;
@@ -1100,7 +1215,8 @@ static void tng_InterFrame_MVContextProbsDataCompile(uint8_t* ui8_probs_to_write
 /***********************************************************************************
 * Description        : Write probability data in buffer according to MSVDX setting.
 ************************************************************************************/
-static void tng_DCT_Coefficient_ProbsDataCompile(Probability* ui8_probs_to_write, uint32_t* ui32_probs_buffer) {
+static void
+tng_DCT_Coefficient_ProbsDataCompile(Probability* ui8_probs_to_write, uint32_t* ui32_probs_buffer) {
     uint32_t dim0, dim1, dim2;
     uint32_t i, j, address;
     uint32_t src_tab_offset = 0;
@@ -1131,14 +1247,14 @@ static void tng_DCT_Coefficient_ProbsDataCompile(Probability* ui8_probs_to_write
 /***********************************************************************************
 * Description        : programme the DMA to send probability data.
 ************************************************************************************/
-static void tng__VP8_set_probility_reg(context_VP8_p ctx) {
+static void
+tng__VP8_set_probility_reg(context_VP8_p ctx) {
     ipvr_execbuffer_p execbuf = ctx->obj_context->execbuf;
     uint32_t *probs_buffer_1stPart , *probs_buffer_2ndPart;
 
     /* First write the data for the first partition */
     /* Write the probability data in the probability data buffer */
-    drm_ipvr_gem_bo_map(ctx->probability_data_1st_part, 0,
-        ctx->probability_data_1st_part_size, 1);
+    drm_ipvr_gem_bo_map(ctx->probability_data_1st_part, 1);
     probs_buffer_1stPart = ctx->probability_data_1st_part->virt;
     if(NULL == probs_buffer_1stPart) {
         drv_debug_msg(VIDEO_DEBUG_GENERAL, "tng__VP8_set_probility_reg: map buffer fail\n");
@@ -1165,8 +1281,7 @@ static void tng__VP8_set_probility_reg(context_VP8_p ctx) {
     }
     
     /* Write the probability data for the second partition and create a linked list */ 
-    drm_ipvr_gem_bo_map(ctx->probability_data_2nd_part, 0,
-        ctx->probability_data_2nd_part_size, 1);
+    drm_ipvr_gem_bo_map(ctx->probability_data_2nd_part, 1);
     probs_buffer_2ndPart = ctx->probability_data_2nd_part->virt;
     if(NULL == probs_buffer_2ndPart) {
         drv_debug_msg(VIDEO_DEBUG_GENERAL, "tng__VP8_set_probility_reg: map buffer fail\n");
@@ -1244,20 +1359,20 @@ static VAStatus tng_VP8_BeginPicture(
     /* Create mem resource for current picture macroblock data to be stored */
     ctx->cur_pic_buffer = drm_ipvr_gem_bo_alloc(obj_context->driver_data->bufmgr,
         ctx->obj_context->ipvr_ctx, "VED-VP8-cur_pic_buffer", ctx->buffer_size,
-        0, IPVR_CACHE_NOACCESS, 1);
+        0, IPVR_CACHE_NOACCESS);
     if (!ctx->cur_pic_buffer)
         goto err;
 
     /* Create mem resource for storing 1st partition .*/
     ctx->buffer_1st_part = drm_ipvr_gem_bo_alloc(obj_context->driver_data->bufmgr,
         ctx->obj_context->ipvr_ctx, "VED-VP8-buffer_1st_part", ctx->buffer_size,
-        0, IPVR_CACHE_NOACCESS, 1);
+        0, IPVR_CACHE_NOACCESS);
     if (!ctx->buffer_1st_part)
         goto err;
 
     ctx->segID_buffer = drm_ipvr_gem_bo_alloc(obj_context->driver_data->bufmgr,
         ctx->obj_context->ipvr_ctx, "VED-VP8-segID_buffer", ctx->segid_size, 0,
-        IPVR_CACHE_NOACCESS, 1);
+        IPVR_CACHE_NOACCESS);
     if (!ctx->segID_buffer)
         goto err;
 
@@ -1265,27 +1380,27 @@ static VAStatus tng_VP8_BeginPicture(
     /* one MB would take 2 bits to store Y2 flag and mb_skip_coeff flag, so size would be same as ui32segidsize */
     ctx->MB_flags_buffer = drm_ipvr_gem_bo_alloc(obj_context->driver_data->bufmgr,
         ctx->obj_context->ipvr_ctx, "VED-VP8-MB_flags_buffer", ctx->segid_size, 0,
-        IPVR_CACHE_NOACCESS, 1);
+        IPVR_CACHE_NOACCESS);
     if (!ctx->MB_flags_buffer)
         goto err;
 
     /* allocate device memory for prbability table for the both the partitions.*/
     ctx->probability_data_1st_part = drm_ipvr_gem_bo_alloc(obj_context->driver_data->bufmgr,
         ctx->obj_context->ipvr_ctx, "VED-VP8-probability_data_1st_part",
-        ctx->probability_data_1st_part_size, 0, IPVR_CACHE_WRITECOMBINE, 1);
+        ctx->probability_data_1st_part_size, 0, IPVR_CACHE_WRITECOMBINE);
     if (!ctx->probability_data_1st_part)
         goto err;
 
     /* allocate device memory for prbability table for the both the partitions.*/
     ctx->probability_data_2nd_part = drm_ipvr_gem_bo_alloc(obj_context->driver_data->bufmgr,
         ctx->obj_context->ipvr_ctx, "VED-VP8-probability_data_2nd_part",
-        ctx->probability_data_2nd_part_size, 0, IPVR_CACHE_WRITECOMBINE, 1);
+        ctx->probability_data_2nd_part_size, 0, IPVR_CACHE_WRITECOMBINE);
     if (!ctx->probability_data_2nd_part)
         goto err;
 
     ctx->intra_buffer = drm_ipvr_gem_bo_alloc(obj_context->driver_data->bufmgr,
         ctx->obj_context->ipvr_ctx, "VED-VP8-intra_buffer", INTRA_BUFFER_SIZE,
-        0, IPVR_CACHE_NOACCESS, 1);
+        0, IPVR_CACHE_NOACCESS);
     if (!ctx->intra_buffer)
         goto err;
 
@@ -1422,8 +1537,8 @@ static VAStatus tng_VP8_EndPicture(
                                           rotation_flags,
                                           2,
                                           ext_stride_a,
-                                          target_surface->chroma_offset + target_surface->buf->buffer_ofs,
-                                          ec_target->ipvr_surface->chroma_offset + ec_target->ipvr_surface->buf->buffer_ofs)) {
+                                          target_surface->chroma_offset,
+                                          ec_target->ipvr_surface->chroma_offset)) {
                 return VA_STATUS_ERROR_UNKNOWN;
             }
         }

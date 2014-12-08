@@ -74,7 +74,7 @@ int ipvr_execbuffer_run(ipvr_execbuffer_p execbuf);
 
 int ipvr_execbuffer_get(drm_ipvr_bufmgr *bufmgr, drm_ipvr_context *ctx,
                  ipvr_execbuffer_p execbuf, const char *name,
-                 size_t buf_size, int reusable);
+                 size_t buf_size);
 
 void ipvr_execbuffer_put(ipvr_execbuffer_p execbuf);
 

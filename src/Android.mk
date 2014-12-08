@@ -39,19 +39,14 @@ LOCAL_SRC_FILES :=               \
     ved_execbuf.c          \
     ved_vld.c                  \
     ved_vp8.c
-LOCAL_SHARED_LIBRARIES := libdl libdrm libdrm_ipvr libcutils \
-    libui libutils libbinder libhardware
+LOCAL_SHARED_LIBRARIES := libdl libdrm libdrm_ipvr libcutils
 
 LOCAL_CFLAGS := -DLINUX -DANDROID -g -Wall -Wno-unused -O0
 
 LOCAL_C_INCLUDES :=                              \
-    $(call include-path-for, libhardware)/hardware \
-    $(call include-path-for, frameworks-base)      \
     $(TARGET_OUT_HEADERS)/libva                    \
     $(TARGET_OUT_HEADERS)/libdrm                   \
-    $(TARGET_OUT_HEADERS)/opengles                 \
     $(LOCAL_PATH)/hwdefs                           \
-    $(TOPDIR)/external/drm
 
 LOCAL_MODULE_TAGS := eng
 LOCAL_MODULE := pvr_drv_video

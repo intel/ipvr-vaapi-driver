@@ -127,7 +127,7 @@ VAStatus ipvr_PutSurface(
         goto out;
     }
 
-    ret = drm_ipvr_gem_bo_map(ipvr_surface->buf, 0, ipvr_surface->size, 0);
+    ret = drm_ipvr_gem_bo_map(ipvr_surface->buf, 0);
     if (ret) {
         vaStatus = VA_STATUS_ERROR_UNKNOWN;
         goto out;

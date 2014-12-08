@@ -86,7 +86,7 @@ VAStatus ipvr_surface_create(ipvr_driver_data_p driver_data,
     }
 
     ipvr_surface->buf = drm_ipvr_gem_bo_alloc(driver_data->bufmgr, NULL,
-        "VASurface", ipvr_surface->size, tiling, IPVR_CACHE_NOACCESS, 0);
+        "VASurface", ipvr_surface->size, tiling, IPVR_CACHE_NOACCESS);
 
     return ipvr_surface->buf ? VA_STATUS_SUCCESS: VA_STATUS_ERROR_ALLOCATION_FAILED;
 }
@@ -148,8 +148,8 @@ VAStatus ipvr_surface_create_from_prime(
     ASSERT (ipvr_surface->size > 0);
     drv_debug_msg(VIDEO_DEBUG_ERROR, "%s create_from_prime with fd %d and size 0x%x\n",
         __func__, prime_fd, ipvr_surface->size);
-    ipvr_surface->buf = drm_ipvr_gem_bo_create_from_prime(driver_data->bufmgr,
-        prime_fd, ipvr_surface->size);
+    ipvr_surface->buf = drm_ipvr_gem_bo_create_from_prime(driver_data->bufmgr, NULL,
+        "imported_surface", prime_fd, ipvr_surface->size);
     return ipvr_surface->buf ? VA_STATUS_SUCCESS: VA_STATUS_ERROR_ALLOCATION_FAILED;
 }
 

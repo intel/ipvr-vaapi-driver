@@ -148,7 +148,6 @@ VAStatus ipvr_DeriveImage(
     object_image_p obj_image;
     object_surface_p obj_surface = SURFACE(surface);
     unsigned int fourcc, fourcc_index = ~0, i;
-    uint32_t srf_buf_ofs = 0;
 
     CHECK_SURFACE(obj_surface);
     CHECK_INVALID_PARAM(image == NULL);
@@ -212,16 +211,14 @@ VAStatus ipvr_DeriveImage(
     obj_image->image.height = obj_surface->height;
     obj_image->image.data_size = obj_surface->ipvr_surface->size;
 
-    srf_buf_ofs = obj_surface->ipvr_surface->buf->buffer_ofs;
-
     switch (fourcc) {
     case VA_FOURCC_NV12: {
         obj_image->image.num_planes = 2;
         obj_image->image.pitches[0] = obj_surface->ipvr_surface->stride;
         obj_image->image.pitches[1] = obj_surface->ipvr_surface->stride;
 
-        obj_image->image.offsets[0] = srf_buf_ofs;
-        obj_image->image.offsets[1] = srf_buf_ofs + obj_surface->height * obj_surface->ipvr_surface->stride;
+        obj_image->image.offsets[0] = 0;
+        obj_image->image.offsets[1] = obj_surface->height * obj_surface->ipvr_surface->stride;
         obj_image->image.num_palette_entries = 0;
         obj_image->image.entry_bytes = 0;
         obj_image->image.component_order[0] = 'Y';
@@ -360,7 +357,7 @@ static VAStatus ipvr_PutImage2(
 
     ipvr_surface_p ipvr_surface = obj_surface->ipvr_surface;
     unsigned char *surface_data;
-    ret = drm_ipvr_gem_bo_map(ipvr_surface->buf, 0, ipvr_surface->buf->size, 1);
+    ret = drm_ipvr_gem_bo_map(ipvr_surface->buf, 1);
     if (ret) {
         return VA_STATUS_ERROR_UNKNOWN;
     }
@@ -370,14 +367,12 @@ static VAStatus ipvr_PutImage2(
     CHECK_BUFFER(obj_buffer);
 
     unsigned char *image_data;
-    ret = drm_ipvr_gem_bo_map(obj_buffer->ipvr_bo, 0, obj_buffer->ipvr_bo->size, 1);
+    ret = drm_ipvr_gem_bo_map(obj_buffer->ipvr_bo, 1);
     if (ret) {
         drm_ipvr_gem_bo_unmap(ipvr_surface->buf);
         return VA_STATUS_ERROR_UNKNOWN;
     }
     image_data = obj_buffer->ipvr_bo->virt;
-
-    image_data += obj_surface->ipvr_surface->buf->buffer_ofs;
 
     switch (obj_image->image.format.fourcc) {
     case VA_FOURCC_NV12: {
@@ -487,7 +482,7 @@ VAStatus ipvr_PutImage(
 
     ipvr_surface_p ipvr_surface = obj_surface->ipvr_surface;
     unsigned char *surface_data;
-    ret = drm_ipvr_gem_bo_map(ipvr_surface->buf, 0, ipvr_surface->buf->size, 1);
+    ret = drm_ipvr_gem_bo_map(ipvr_surface->buf, 1);
     if (ret) {
         return VA_STATUS_ERROR_UNKNOWN;
     }
@@ -497,7 +492,7 @@ VAStatus ipvr_PutImage(
     CHECK_BUFFER(obj_buffer);
 
     unsigned char *image_data;
-    ret = drm_ipvr_gem_bo_map(obj_buffer->ipvr_bo, 0, obj_buffer->ipvr_bo->size, 1);
+    ret = drm_ipvr_gem_bo_map(obj_buffer->ipvr_bo, 1);
     if (ret) {
         drm_ipvr_gem_bo_unmap(ipvr_surface->buf);
         return VA_STATUS_ERROR_UNKNOWN;

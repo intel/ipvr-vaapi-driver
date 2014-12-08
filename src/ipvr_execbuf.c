@@ -160,7 +160,7 @@ int ipvr_execbuffer_add_command(ipvr_execbuffer_p execbuf, int cmd, void *arg, s
 
 int ipvr_execbuffer_get(drm_ipvr_bufmgr *bufmgr, drm_ipvr_context *ctx,
                  ipvr_execbuffer_p execbuf, const char *name,
-                 size_t buf_size, int reusable)
+                 size_t buf_size)
 {
     int ret;
     ASSERT (!execbuf->valid);
@@ -170,11 +170,11 @@ int ipvr_execbuffer_get(drm_ipvr_bufmgr *bufmgr, drm_ipvr_context *ctx,
     execbuf->cur_offset = 0;
     execbuf->start_offset = 0;
     execbuf->bo = drm_ipvr_gem_bo_alloc(bufmgr, ctx, name, buf_size, 0,
-        IPVR_CACHE_WRITECOMBINE, reusable);
+        IPVR_CACHE_WRITECOMBINE);
     if (!execbuf->bo) {
         return -ENOMEM;
     }
-    ret = drm_ipvr_gem_bo_map(execbuf->bo, 0, execbuf->bo->size, 1);
+    ret = drm_ipvr_gem_bo_map(execbuf->bo, 1);
     if (ret) {
         drm_ipvr_gem_bo_unreference(execbuf->bo);
         return ret;

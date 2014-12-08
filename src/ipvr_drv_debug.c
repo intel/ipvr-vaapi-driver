@@ -342,7 +342,7 @@ void ipvr__dump_I420_buffers(
     uint8_t *mapped_buffer1, *mapped_buffer2;
 
     if (ipvr_dump_yuvbuf_fp) {
-        if (drm_ipvr_gem_bo_map(ipvr_surface->buf, 0, ipvr_surface->buf->size, 1))
+        if (drm_ipvr_gem_bo_map(ipvr_surface->buf, 0))
             return;
         mapped_buffer = ipvr_surface->buf->virt;
 
@@ -394,7 +394,7 @@ void ipvr__dump_NV12_buffers(
     uint8_t *mapped_start;
 
     if (ipvr_dump_yuvbuf_fp) {
-        if (drm_ipvr_gem_bo_map(ipvr_surface->buf, 0, ipvr_surface->size, 1))
+        if (drm_ipvr_gem_bo_map(ipvr_surface->buf, 0))
             return;
         mapped_buffer = ipvr_surface->buf->virt;
 
@@ -855,7 +855,7 @@ void ipvr__dump_va_buffers(object_buffer_p obj_buffer)
 
             case VASliceGroupMapBufferType:
             case VABitPlaneBufferType:
-                if (drm_ipvr_gem_bo_map(obj_buffer->ipvr_bo, 0, obj_buffer->ipvr_bo->size, 1))
+                if (drm_ipvr_gem_bo_map(obj_buffer->ipvr_bo, 0))
                     return;
                 mapped_buffer = obj_buffer->ipvr_bo->virt;
 
@@ -871,7 +871,7 @@ void ipvr__dump_va_buffers(object_buffer_p obj_buffer)
             case VASliceDataBufferType:
             case VAProtectedSliceDataBufferType:
                 fprintf(ipvr_dump_vabuf_fp,"first 256 bytes:\n");
-                if (drm_ipvr_gem_bo_map(obj_buffer->ipvr_bo, 0, obj_buffer->ipvr_bo->size, 1))
+                if (drm_ipvr_gem_bo_map(obj_buffer->ipvr_bo, 0))
                     break;
                 mapped_buffer = obj_buffer->ipvr_bo->virt;
                 for(j=0; j<256;++j) {
@@ -1169,7 +1169,7 @@ j=1309;k=0;
                 break;
 
             case VASliceGroupMapBufferType:
-                if (drm_ipvr_gem_bo_map(obj_buffer->ipvr_bo, 0, obj_buffer->ipvr_bo->size, 0))
+                if (drm_ipvr_gem_bo_map(obj_buffer->ipvr_bo, 0))
                     return;
                 mapped_buffer = obj_buffer->ipvr_bo->virt;
 
@@ -1184,7 +1184,7 @@ j=1309;k=0;
             case VASliceDataBufferType:
             case VAProtectedSliceDataBufferType:
                 fprintf(ipvr_dump_vabuf_verbose_fp,"first 256 bytes:\n");
-                if (drm_ipvr_gem_bo_map(obj_buffer->ipvr_bo, 0, obj_buffer->ipvr_bo->size, 0))
+                if (drm_ipvr_gem_bo_map(obj_buffer->ipvr_bo, 0))
                     return;
                 mapped_buffer = obj_buffer->ipvr_bo->virt;
 

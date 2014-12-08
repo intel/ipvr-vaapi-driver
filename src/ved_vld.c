@@ -80,7 +80,7 @@ void vld_dec_setup_alternative_frame(object_context_p obj_context)
     if (obj_context->profile == VAProfileVP8Version0_3 ||
         obj_context->profile == VAProfileJPEGBaseline) {
         ved_execbuf_rendec_start(execbuf, (REG_MSVDX_CMD_OFFSET + MSVDX_CMDS_AUX_LINE_BUFFER_BASE_ADDRESS_OFFSET));
-        ved_execbuf_rendec_write_address(execbuf, ctx->aux_line_buffer_vld, ctx->aux_line_buffer_vld->buffer_ofs, 0);
+        ved_execbuf_rendec_write_address(execbuf, ctx->aux_line_buffer_vld, 0, 0);
         ved_execbuf_rendec_end(execbuf);
 
         REGIO_WRITE_FIELD_LITE(cmd, MSVDX_CMDS, ALTERNATIVE_OUTPUT_PICTURE_ROTATION, USE_AUX_LINE_BUF, 1);
@@ -206,7 +206,7 @@ VAStatus vld_dec_process_slice(context_DEC_p ctx,
         ctx->slice_data_buffer = obj_buffer->ipvr_bo;
             ved_execbuf_dma_write_bitstream(ctx->obj_context->execbuf,
                                          obj_buffer->ipvr_bo,
-                                         obj_buffer->ipvr_bo->buffer_ofs + slice_param->slice_data_offset,
+                                         slice_param->slice_data_offset,
                                          slice_param->slice_data_size,
                                          ctx->bits_offset,
                                          ctx->SR_flags);
@@ -280,7 +280,7 @@ VAStatus vld_dec_allocate_colocated_buffer(context_DEC_p ctx, object_surface_p o
 
         buf = ctx->colocated_buffers[index];
         buf = drm_ipvr_gem_bo_alloc(ctx->obj_context->driver_data->bufmgr, ctx->obj_context->ipvr_ctx,
-            boname, size, 0, IPVR_CACHE_NOACCESS, 0);
+            boname, size, 0, IPVR_CACHE_NOACCESS);
         if (!buf)
             vaStatus = VA_STATUS_ERROR_ALLOCATION_FAILED;
         if (VA_STATUS_SUCCESS != vaStatus) {
@@ -293,7 +293,7 @@ VAStatus vld_dec_allocate_colocated_buffer(context_DEC_p ctx, object_surface_p o
         if (buf->size < size) {
             drm_ipvr_gem_bo_unreference(buf);
             buf = drm_ipvr_gem_bo_alloc(ctx->obj_context->driver_data->bufmgr, ctx->obj_context->ipvr_ctx,
-                boname, size, 0, IPVR_CACHE_NOACCESS, 0);
+                boname, size, 0, IPVR_CACHE_NOACCESS);
             if (!buf)
                 vaStatus = VA_STATUS_ERROR_ALLOCATION_FAILED;
             if (VA_STATUS_SUCCESS != vaStatus) {
@@ -320,7 +320,7 @@ VAStatus vld_dec_BeginPicture(
     int ret;
     ctx->aux_line_buffer_vld = drm_ipvr_gem_bo_alloc(obj_context->driver_data->bufmgr,
         ctx->obj_context->ipvr_ctx, "VED-aux_line_buffer_vld",
-        AUX_LINE_BUFFER_VLD_SIZE, 0, IPVR_CACHE_NOACCESS, 1);
+        AUX_LINE_BUFFER_VLD_SIZE, 0, IPVR_CACHE_NOACCESS);
     if (!ctx->aux_line_buffer_vld) {
         return VA_STATUS_ERROR_ALLOCATION_FAILED;
     }
