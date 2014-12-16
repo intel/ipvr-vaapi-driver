@@ -1359,20 +1359,20 @@ static VAStatus tng_VP8_BeginPicture(
     /* Create mem resource for current picture macroblock data to be stored */
     ctx->cur_pic_buffer = drm_ipvr_gem_bo_alloc(obj_context->driver_data->bufmgr,
         ctx->obj_context->ipvr_ctx, "VED-VP8-cur_pic_buffer", ctx->buffer_size,
-        0, IPVR_CACHE_NOACCESS);
+        0, IPVR_CACHE_UNCACHED);
     if (!ctx->cur_pic_buffer)
         goto err;
 
     /* Create mem resource for storing 1st partition .*/
     ctx->buffer_1st_part = drm_ipvr_gem_bo_alloc(obj_context->driver_data->bufmgr,
         ctx->obj_context->ipvr_ctx, "VED-VP8-buffer_1st_part", ctx->buffer_size,
-        0, IPVR_CACHE_NOACCESS);
+        0, IPVR_CACHE_UNCACHED);
     if (!ctx->buffer_1st_part)
         goto err;
 
     ctx->segID_buffer = drm_ipvr_gem_bo_alloc(obj_context->driver_data->bufmgr,
         ctx->obj_context->ipvr_ctx, "VED-VP8-segID_buffer", ctx->segid_size, 0,
-        IPVR_CACHE_NOACCESS);
+        IPVR_CACHE_UNCACHED);
     if (!ctx->segID_buffer)
         goto err;
 
@@ -1380,7 +1380,7 @@ static VAStatus tng_VP8_BeginPicture(
     /* one MB would take 2 bits to store Y2 flag and mb_skip_coeff flag, so size would be same as ui32segidsize */
     ctx->MB_flags_buffer = drm_ipvr_gem_bo_alloc(obj_context->driver_data->bufmgr,
         ctx->obj_context->ipvr_ctx, "VED-VP8-MB_flags_buffer", ctx->segid_size, 0,
-        IPVR_CACHE_NOACCESS);
+        IPVR_CACHE_UNCACHED);
     if (!ctx->MB_flags_buffer)
         goto err;
 
@@ -1400,7 +1400,7 @@ static VAStatus tng_VP8_BeginPicture(
 
     ctx->intra_buffer = drm_ipvr_gem_bo_alloc(obj_context->driver_data->bufmgr,
         ctx->obj_context->ipvr_ctx, "VED-VP8-intra_buffer", INTRA_BUFFER_SIZE,
-        0, IPVR_CACHE_NOACCESS);
+        0, IPVR_CACHE_UNCACHED);
     if (!ctx->intra_buffer)
         goto err;
 

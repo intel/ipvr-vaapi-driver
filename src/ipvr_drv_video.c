@@ -987,7 +987,7 @@ static VAStatus ipvr__allocate_BO_buffer(ipvr_driver_data_p driver_data, object_
     case VAImageBufferType: /* Xserver side PutSurface, Image/subpicture buffer
         * should be shared between two process
         */
-        cache_level = IPVR_CACHE_NOACCESS;
+        cache_level = IPVR_CACHE_UNCACHED;
         break;
     default:
         cache_level = IPVR_CACHE_WRITECOMBINE;

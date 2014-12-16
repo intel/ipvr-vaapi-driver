@@ -86,7 +86,7 @@ VAStatus ipvr_surface_create(ipvr_driver_data_p driver_data,
     }
 
     ipvr_surface->buf = drm_ipvr_gem_bo_alloc(driver_data->bufmgr, NULL,
-        "VASurface", ipvr_surface->size, tiling, IPVR_CACHE_NOACCESS);
+        "VASurface", ipvr_surface->size, tiling, IPVR_CACHE_UNCACHED);
 
     return ipvr_surface->buf ? VA_STATUS_SUCCESS: VA_STATUS_ERROR_ALLOCATION_FAILED;
 }

@@ -280,7 +280,7 @@ VAStatus vld_dec_allocate_colocated_buffer(context_DEC_p ctx, object_surface_p o
 
         buf = ctx->colocated_buffers[index];
         buf = drm_ipvr_gem_bo_alloc(ctx->obj_context->driver_data->bufmgr, ctx->obj_context->ipvr_ctx,
-            boname, size, 0, IPVR_CACHE_NOACCESS);
+            boname, size, 0, IPVR_CACHE_UNCACHED);
         if (!buf)
             vaStatus = VA_STATUS_ERROR_ALLOCATION_FAILED;
         if (VA_STATUS_SUCCESS != vaStatus) {
@@ -293,7 +293,7 @@ VAStatus vld_dec_allocate_colocated_buffer(context_DEC_p ctx, object_surface_p o
         if (buf->size < size) {
             drm_ipvr_gem_bo_unreference(buf);
             buf = drm_ipvr_gem_bo_alloc(ctx->obj_context->driver_data->bufmgr, ctx->obj_context->ipvr_ctx,
-                boname, size, 0, IPVR_CACHE_NOACCESS);
+                boname, size, 0, IPVR_CACHE_UNCACHED);
             if (!buf)
                 vaStatus = VA_STATUS_ERROR_ALLOCATION_FAILED;
             if (VA_STATUS_SUCCESS != vaStatus) {
@@ -320,7 +320,7 @@ VAStatus vld_dec_BeginPicture(
     int ret;
     ctx->aux_line_buffer_vld = drm_ipvr_gem_bo_alloc(obj_context->driver_data->bufmgr,
         ctx->obj_context->ipvr_ctx, "VED-aux_line_buffer_vld",
-        AUX_LINE_BUFFER_VLD_SIZE, 0, IPVR_CACHE_NOACCESS);
+        AUX_LINE_BUFFER_VLD_SIZE, 0, IPVR_CACHE_UNCACHED);
     if (!ctx->aux_line_buffer_vld) {
         return VA_STATUS_ERROR_ALLOCATION_FAILED;
     }
